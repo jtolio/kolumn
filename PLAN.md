@@ -172,7 +172,7 @@ The code budget is about 400 lines of application code across the three `src` fi
    kpackagetool6 --type=KWin/Script -i package/    # later updates use -u
    kwriteconfig6 --file kwinrc --group Plugins --key kolumnEnabled true
    qdbus6 org.kde.KWin /KWin reconfigure
-   journalctl --user -f | grep -i kolumn           # print() output from the script
+   journalctl --user -f | grep -i kolumn           # script errors and console.warn() output
    ```
 6. Check each requirement by hand on one monitor, then on two:
    - Open and close windows.
