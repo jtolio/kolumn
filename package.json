@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc && esbuild src/main.ts --bundle --format=iife --target=es2020 --outfile=package/contents/code/main.js",
-    "test": "node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts",
+    "reload": "npm run build && (kpackagetool6 --type=KWin/Script -u package/ || kpackagetool6 --type=KWin/Script -i package/) && qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript kolumn; qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.start"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

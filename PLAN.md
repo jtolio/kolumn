@@ -168,12 +168,11 @@ The code budget is about 400 lines of application code across the three `src` fi
 4. Write `main.ts`: the event wiring, the shortcuts, and `relayout()`.
 5. Install it and try it on the real desktop:
    ```
-   npm run build
-   kpackagetool6 --type=KWin/Script -i package/    # later updates use -u
    kwriteconfig6 --file kwinrc --group Plugins --key kolumnEnabled true
-   qdbus6 org.kde.KWin /KWin reconfigure
+   npm run reload      # build, install or upgrade, then unload and start kolumn
    journalctl --user -f | grep -i kolumn           # script errors and console.warn() output
    ```
+   `qdbus6 org.kde.KWin /KWin reconfigure` does not pick up a new build. KWin only loads scripts that are not already loaded (`kwin/src/scripting/scripting.cpp:774-790`), so `reload` unloads kolumn first.
 6. Check each requirement by hand on one monitor, then on two:
    - Open and close windows.
    - Use every shortcut, including at the edges of columns and ribbons.
