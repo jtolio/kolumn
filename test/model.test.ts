@@ -1,0 +1,130 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import * as m from "../src/model.ts";
+
+// Renders a workspace as ribbons of columns of window names, e.g. [[["a"], ["b", "c"]]].
+const shape = (ws: m.Workspace<string>) => ws.ribbons.map(r => r.columns.map(c => c.cells.map(cell => cell.win)));
+const weights = (ws: m.Workspace<string>, r: number, c: number) => ws.ribbons[r].columns[c].cells.map(cell => cell.weight);
+
+function build(...wins: string[]) {
+  const ws = m.workspace<string>();
+  for (const w of wins) {
+    m.add(ws, w, 100);
+    m.setFocus(ws, w);
+  }
+  return ws;
+}
+
+test("new windows open right of the focused column", () => {
+  const ws = build("a", "b");
+  m.setFocus(ws, "a");
+  m.add(ws, "c", 100);
+  assert.deepEqual(shape(ws), [[["a"], ["c"], ["b"]]]);
+});
+
+test("removing a cell keeps the other weights", () => {
+  const ws = build("a", "b", "c");
+  m.drop(ws, "b", "a", "down");
+  m.drop(ws, "c", "b", "down");
+  const cells = ws.ribbons[0].columns[0].cells;
+  cells[0].weight = 1; cells[1].weight = 2; cells[2].weight = 3;
+  m.remove(ws, "a");
+  assert.deepEqual(shape(ws), [[["b", "c"]]]);
+  assert.deepEqual(weights(ws, 0, 0), [2, 3]);
+});
+
+test("a new cell gets the mean weight", () => {
+  const ws = build("a", "b", "c");
+  m.drop(ws, "b", "a", "down");
+  ws.ribbons[0].columns[0].cells[1].weight = 3;
+  m.drop(ws, "c", "b", "up");
+  assert.deepEqual(weights(ws, 0, 0), [1, 2, 3]);
+});
+
+test("removing the last window of a column or ribbon removes it", () => {
+  const ws = build("a", "b");
+  m.move(ws, "b", "down");
+  assert.deepEqual(shape(ws), [[["a"]], [["b"]]]);
+  m.remove(ws, "b");
+  assert.deepEqual(shape(ws), [[["a"]]]);
+});
+
+test("focus moves between columns and stops at the ends", () => {
+  const ws = build("a", "b");
+  assert.equal(m.neighbor(ws, "a", "right"), "b");
+  assert.equal(m.neighbor(ws, "b", "right"), undefined);
+  assert.equal(m.neighbor(ws, "a", "left"), undefined);
+});
+
+test("focus up and down falls through to the next ribbon's focused window", () => {
+  const ws = build("a", "b", "c");
+  m.drop(ws, "b", "a", "down");
+  m.move(ws, "c", "down");
+  assert.deepEqual(shape(ws), [[["a", "b"]], [["c"]]]);
+  assert.equal(m.neighbor(ws, "a", "down"), "b");
+  assert.equal(m.neighbor(ws, "b", "down"), "c");
+  assert.equal(m.neighbor(ws, "c", "up"), "a");
+});
+
+test("moving sideways out of a shared column makes a new column on that side", () => {
+  const ws = build("a", "b");
+  m.drop(ws, "b", "a", "down");
+  m.move(ws, "b", "left");
+  assert.deepEqual(shape(ws), [[["b"], ["a"]]]);
+});
+
+test("moving a lone window sideways joins the neighbor column at the middle", () => {
+  const ws = build("a", "b", "c");
+  m.drop(ws, "b", "a", "down");
+  m.move(ws, "c", "left");
+  assert.deepEqual(shape(ws), [[["a", "c", "b"]]]);
+  m.move(ws, "c", "left");
+  m.move(ws, "c", "left");
+  assert.deepEqual(shape(ws), [[["c"], ["a", "b"]]]);
+});
+
+test("moving a lone window sideways at the end of a ribbon does nothing", () => {
+  const ws = build("a");
+  m.move(ws, "a", "left");
+  assert.deepEqual(shape(ws), [[["a"]]]);
+});
+
+test("moving up and down swaps cells, then changes ribbon, creating one if needed", () => {
+  const ws = build("a", "b");
+  m.drop(ws, "b", "a", "down");
+  m.move(ws, "b", "up");
+  assert.deepEqual(shape(ws), [[["b", "a"]]]);
+  m.move(ws, "b", "up");
+  assert.deepEqual(shape(ws), [[["b"]], [["a"]]]);
+  m.move(ws, "b", "down");
+  assert.deepEqual(shape(ws), [[["a"], ["b"]]]);
+});
+
+test("dropping on each side of a window", () => {
+  const ws = build("a", "b");
+  m.drop(ws, "b", "a", "left");
+  assert.deepEqual(shape(ws), [[["b"], ["a"]]]);
+  m.drop(ws, "b", "a", "right");
+  assert.deepEqual(shape(ws), [[["a"], ["b"]]]);
+  m.drop(ws, "b", "a", "up");
+  assert.deepEqual(shape(ws), [[["b", "a"]]]);
+  m.drop(ws, "b", "a", "down");
+  assert.deepEqual(shape(ws), [[["a", "b"]]]);
+});
+
+test("dropping on the middle swaps windows and leaves weights in place", () => {
+  const ws = build("a", "b", "c");
+  m.drop(ws, "b", "a", "down");
+  ws.ribbons[0].columns[0].cells[0].weight = 2;
+  m.drop(ws, "a", "c", "middle");
+  assert.deepEqual(shape(ws), [[["c", "b"], ["a"]]]);
+  assert.deepEqual(weights(ws, 0, 0), [2, 1]);
+});
+
+test("resizing a cell moves weight only from its neighbor", () => {
+  const ws = build("a", "b", "c");
+  m.drop(ws, "b", "a", "down");
+  m.drop(ws, "c", "b", "down");
+  m.resizeCell(ws.ribbons[0].columns[0], 1, 1, 0.5);
+  assert.deepEqual(weights(ws, 0, 0), [1, 1.5, 0.5]);
+});
