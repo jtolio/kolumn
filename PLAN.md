@@ -13,8 +13,8 @@ kolumn is a KWin script for Plasma 6.6, the version Kubuntu 26.04 ships. It arra
 - A window is a KWin window.
 - A cell holds one window and has a weight. A cell's share of the column height is its weight divided by the sum of the weights in the column.
 - A column is a vertical stack of one or more cells. It has a width in pixels.
-- A ribbon is a horizontal row of zero or more columns. It has a horizontal scroll offset in pixels.
-- A workspace is a vertical stack of ribbons. It also stores the index of the top visible ribbon. There is one workspace per KDE virtual desktop.
+- A ribbon is a horizontal row of zero or more columns. It has a horizontal scroll offset in pixels and a weight. A new ribbon gets the mean weight of the existing ribbons.
+- A workspace is a vertical stack of ribbons. It also stores the index of the top visible ribbon and how many ribbons each monitor row shows at once, which is at least 1 and starts at 1. There is one workspace per KDE virtual desktop.
 
 kolumn deletes a column when its last cell leaves, and deletes a ribbon when its last column leaves.
 
@@ -34,13 +34,13 @@ KWin applies each window's own min and max size limits. A window that cannot gro
 kolumn places every window directly in KDE's global coordinate space. KWin then shows whatever lands on each monitor. A window outside every monitor is not drawn.
 
 1. Rows. kolumn groups monitors whose usable vertical ranges overlap into one row. It uses `workspace.clientArea(MaximizeArea, output, desktop)` for each monitor's usable area, which already leaves out Plasma panels. Rows are sorted top to bottom. With a single monitor there is one row. Each row has a main monitor, which is its first monitor in `workspace.screenOrder`. That list is sorted by Plasma's monitor priority, so the row with the primary monitor has it as its main monitor.
-2. Which ribbon each row shows. Row `k` shows ribbon `top + k`. kolumn stacks ribbons above `top` upward past the top edge of row 0. It stacks ribbons past the last row downward past that row's bottom edge. Ribbons outside the rows end up off-screen.
+2. Which ribbons each row shows. With `shown` ribbons per row, row `k` shows ribbons `top + k * shown` through `top + k * shown + shown - 1`. Each shown ribbon gets `weight / sum(weights)` of the row's height, summed over the ribbons that row actually shows. A ribbon alone in its row fills it, even when `shown` is larger. kolumn stacks ribbons above `top` upward past the top edge of row 0, one row height each. It stacks ribbons past the last shown one downward past the last row's bottom edge. Ribbons outside the rows end up off-screen.
 3. Horizontal placement. A ribbon's columns are packed edge to edge. A ribbon narrower than its row is centered on the row's main monitor, then shifted just enough to stay inside the row's left and right edges. A ribbon at least as wide as its row starts at the row's left edge, minus the ribbon's scroll offset. A column may cross a monitor seam. When `main.ts` writes a window's geometry, it insets the window GAP/2 px from its cell on every side, which leaves a GAP px gap between neighboring windows. A column's width includes that gap, so a new column is GAP px wider than the window's own width.
 4. Column height. A column's vertical extent is the overlap of the usable vertical ranges of the monitors it covers horizontally in its row. A column on one monitor gets that monitor's height. A column across a seam gets the smaller of the two heights. An off-screen column uses the nearest monitor in its row.
 5. Cell height. Each cell gets `weight / sum(weights)` of the column height. The weights are never normalized. Removing a cell leaves the other weights unchanged, so in a column with weights `a, b, c`, removing `a` gives `b` a share of `b/(b+c)`. A new cell gets the mean of the column's existing weights, so it takes `1/(n+1)` of the height and the existing cells keep their proportions to each other.
 6. Scrolling. When the focused window changes, kolumn scrolls as little as possible:
    - Horizontally, it changes the focused ribbon's offset just enough to fit the column inside the row's left and right edges. A column wider than the row is aligned to the left edge. The offset never goes past the point where the ribbon's last column ends at the row's right edge, so closing a column at the end pulls the others back instead of leaving empty space.
-   - Vertically, it changes `top` just enough to put the focused ribbon on a visible row.
+   - Vertically, it changes `top` just enough to show the focused ribbon. `top` never goes past the point where the last ribbon fills the last shown slot, so closing a ribbon at the end pulls the others back.
 
    Other ribbons keep their offsets.
 
@@ -92,6 +92,7 @@ The resize rule runs when a resize finishes. KWin chooses which edge to drag fro
 
 - If the left or right edge moved, the column width becomes the new width.
 - If the top or bottom edge moved and there is a neighbor cell on that side, kolumn moves weight between the two cells so the shared edge ends up where you released it.
+- If the top or bottom edge moved and there is no neighbor cell on that side, which is always true for a one-cell column, kolumn moves weight the same way between the window's ribbon and the neighbor ribbon shown in the same row. With no ribbon shown on that side, nothing changes.
 - Anything else is discarded by `relayout()`.
 
 ### Zoom out
@@ -117,7 +118,8 @@ kolumn does not keep any of a neighbor column visible at the screen edge. With f
 | Meta+Ctrl+arrows | Switch virtual desktop. This is KDE's default binding, and kolumn does not change it. |
 | Meta+Ctrl+Shift+arrows | Move the window to another virtual desktop. This is KDE's default, handled through `desktopsChanged`. |
 | No default key | Increase or decrease window width: change the focused column's width by 100px. It never goes below the window's minimum width. |
-| No default key | Increase or decrease window height: change the focused cell's height by 100px. Only that cell's weight changes, so the other cells in the column keep their proportions to each other. The cell stays at or above the window's minimum height and at or below 90% of the column. In a one-cell column, nothing happens. |
+| No default key | Increase or decrease window height: change the focused cell's height by 100px. Only that cell's weight changes, so the other cells in the column keep their proportions to each other. The cell stays at or above the window's minimum height and at or below 90% of the column. In a one-cell column, the ribbon's height changes the same way among the ribbons shown in its row. |
+| No default key | Show more or fewer ribbons: change how many ribbons each monitor row shows, by one, never below 1. |
 
 ### Why these keys
 

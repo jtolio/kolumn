@@ -3,7 +3,7 @@
 // model.ts and geometry.ts.
 
 import * as model from "./model.ts";
-import { hit, layout, rows, scroll, type Rect } from "./geometry.ts";
+import { hit, layout, place, rows, scroll, type Rect } from "./geometry.ts";
 
 // The parts of KWin's scripting API used here. See kwin/src/window.h and
 // kwin/src/scripting/workspace_wrapper.h.
@@ -78,19 +78,28 @@ function dropped(s: Space, w: Win) {
 
 // KWin resizes from the edge nearest the grab point. A moved left or right
 // edge sets the column width. A moved top or bottom edge moves the split
-// with the neighbor cell on that side.
+// with the neighbor cell on that side, or, with no cell there, with the
+// neighbor ribbon shown in the same row.
 function resized(s: Space, w: Win, start: Rect) {
   const p = model.find(s.ws, w), g = w.frameGeometry;
   if (!p) return;
   if (g.width !== start.width) p.column.width = g.width + GAP;
   const dy = g.y !== start.y ? -1 : g.y + g.height !== start.y + start.height ? 1 : 0;
-  if (dy) model.resizeCell(p.column, p.k, dy, (g.height + GAP) / columnHeight(s, p.column));
+  if (!dy) return;
+  const [items, k, size, height] = vertical(s, p, !!p.column.cells[p.k + dy]);
+  model.resizePair(items, k, dy, (size + g.height - start.height) / height);
 }
 
-// The column's height in pixels, from its cells' rectangles.
-function columnHeight(s: Space, column: model.Column<Win>) {
-  const rects = layout(s.ws, rowsOf(s.desktop));
-  return column.cells.reduce((h, c) => h + rects.get(c.win)!.height, 0);
+// What a vertical resize of p's window changes: the cells of its column,
+// or the ribbons shown in its row. Returns those items, the index of the
+// window's own item, that item's height, and all the items' height, in
+// pixels at the window's column.
+function vertical(s: Space, p: model.Pos<Win>, cells: boolean): [model.Weighted[], number, number, number] {
+  const rs = rowsOf(s.desktop), rects = layout(s.ws, rs);
+  const height = p.column.cells.reduce((h, c) => h + rects.get(c.win)!.height, 0);
+  if (cells) return [p.column.cells, p.k, rects.get(p.column.cells[p.k].win)!.height, height];
+  const { group } = place(s.ws, rs, p.r);
+  return [group, group.indexOf(p.ribbon), height, (height * model.total(group)) / p.ribbon.weight];
 }
 
 // KWin's own windows, such as decoration button tooltips, report type
@@ -130,8 +139,9 @@ for (const dir of Object.keys(keys) as model.Dir[]) {
     withActive((s, w) => { model.move(s.ws, w, dir); refresh(); }));
 }
 
-// Resizing steps by STEP pixels and has no default keys. Assign them in
-// System Settings.
+// Resizing steps by STEP pixels. Height resizes the window's cell, or its
+// ribbon when the window is alone in its column. These shortcuts and the
+// ribbon count ones have no default keys. Assign them in System Settings.
 const STEP = 100;
 for (const axis of ["width", "height"] as const) {
   for (const [verb, delta] of [["Increase", STEP], ["Decrease", -STEP]] as const) {
@@ -139,10 +149,20 @@ for (const axis of ["width", "height"] as const) {
       withActive((s, w) => {
         const p = model.find(s.ws, w);
         if (!p) return;
-        model.grow(s.ws, w, axis, delta, w.minSize[axis] + GAP, columnHeight(s, p.column));
+        if (axis === "width") p.column.width = Math.max(p.column.width + delta, w.minSize.width + GAP);
+        else {
+          const [items, k, , height] = vertical(s, p, p.column.cells.length > 1);
+          model.growShare(items, k, delta, w.minSize.height + GAP, height);
+        }
         refresh();
       }));
   }
+}
+
+// How many ribbons each monitor row shows, at least 1.
+for (const [verb, delta] of [["More", 1], ["Fewer", -1]] as const) {
+  registerShortcut(`kolumn ${verb.toLowerCase()} ribbons`, `kolumn: Show ${verb} Ribbons`, "", () =>
+    withActive(s => { s.ws.shown = Math.max(1, s.ws.shown + delta); refresh(); }));
 }
 
 workspace.windowAdded.connect(w => { track(w); refresh(); });

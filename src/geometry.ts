@@ -48,18 +48,30 @@ function origin<W>(ribbon: Ribbon<W>, row: Row) {
   return Math.min(Math.max(m.x + (m.width - w) / 2, row.left), row.right - w);
 }
 
-// Row k shows ribbon top + k. Ribbons above or below the rows stack
-// off-screen past the first or last row.
+// Row k shows ws.shown ribbons starting at ribbon top + k * ws.shown, and
+// group is the ribbons that share ribbon r's row. A ribbon above or below
+// the rows gets a row index past the first or last row and a row to itself,
+// so off-screen ribbons stack away from the screen.
+export function place<W>(ws: Workspace<W>, rs: Row[], r: number): { k: number; group: Ribbon<W>[] } {
+  const j = r - ws.top, slots = rs.length * ws.shown;
+  if (j < 0 || j >= slots) return { k: j < 0 ? j : rs.length + j - slots, group: [ws.ribbons[r]] };
+  const k = Math.floor(j / ws.shown), first = ws.top + k * ws.shown;
+  return { k, group: ws.ribbons.slice(first, first + ws.shown) };
+}
+
+// Each ribbon takes its weighted band of its row's height.
 export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   const out = new Map<W, Rect>();
   if (!rs.length) return out;
   ws.ribbons.forEach((ribbon, r) => {
-    const k = r - ws.top, row = rs[clamp(k, rs.length)];
+    const { k, group } = place(ws, rs, r), row = rs[clamp(k, rs.length)];
     const dy = (k - clamp(k, rs.length)) * (row.bottom - row.top);
+    const f0 = total(group.slice(0, group.indexOf(ribbon))) / total(group), f = ribbon.weight / total(group);
     let x = origin(ribbon, row);
     for (const column of ribbon.columns) {
       const [top, bottom] = span(row, x, column.width);
-      const at = (acc: number) => Math.round(top + ((bottom - top) * acc) / total(column));
+      const y0 = top + (bottom - top) * f0, h = (bottom - top) * f;
+      const at = (acc: number) => Math.round(y0 + (h * acc) / total(column.cells));
       let acc = 0;
       for (const cell of column.cells) {
         const y = at(acc);
@@ -72,15 +84,17 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   return out;
 }
 
-// Scrolls as little as possible so the focused ribbon is on a row and its
-// focused column fits between the row's left and right edges. A column
-// wider than the row lines up with the left edge. The ribbon never scrolls
-// past its last column, so closing a column at the end pulls the rest back.
+// Scrolls as little as possible so the focused ribbon is shown and its
+// focused column fits between its row's left and right edges. A column
+// wider than the row lines up with the left edge. Scrolling never goes past
+// the last ribbon or the last column, so closing one at the end pulls the
+// rest back.
 export function scroll<W>(ws: Workspace<W>, rs: Row[]) {
   const ribbon = ws.ribbons[ws.focus];
   if (!ribbon || !rs.length) return;
-  ws.top = Math.min(ws.focus, Math.max(ws.top, ws.focus - rs.length + 1));
-  const row = rs[ws.focus - ws.top], rowWidth = row.right - row.left;
+  const slots = rs.length * ws.shown;
+  ws.top = Math.max(0, Math.min(ws.focus, Math.max(ws.top, ws.focus - slots + 1), ws.ribbons.length - slots));
+  const row = rs[place(ws, rs, ws.focus).k], rowWidth = row.right - row.left;
   const start = ribbon.columns.slice(0, ribbon.focus).reduce((s, c) => s + c.width, 0);
   const end = start + ribbon.columns[ribbon.focus].width;
   const last = width(ribbon) - rowWidth;

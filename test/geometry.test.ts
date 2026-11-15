@@ -137,3 +137,52 @@ test("hit picks the nearest outer quarter, or the middle", () => {
   assert.equal(hit(rects, { x: 150, y: 50 }, "b"), undefined);
   assert.equal(hit(rects, { x: 300, y: 50 }, "b"), undefined);
 });
+
+// Three ribbons of one 1920-wide column each.
+function ribbons() {
+  const ws = build(1920, 1920, 1920);
+  m.move(ws, "w1", "down");
+  m.move(ws, "w2", "down");
+  m.move(ws, "w2", "down");
+  return ws;
+}
+
+test("a row shows `shown` ribbons, split by their weights", () => {
+  const ws = ribbons();
+  ws.shown = 2;
+  ws.ribbons[1].weight = 3;
+  const out = layout(ws, rows([rect(0, 0, 1920, 1080)]));
+  assert.deepEqual(out.get("w0"), rect(0, 0, 1920, 270));
+  assert.deepEqual(out.get("w1"), rect(0, 270, 1920, 810));
+  assert.equal(out.get("w2")!.y, 1080);
+});
+
+test("a ribbon alone in its row fills it, even when more could be shown", () => {
+  const ws = build(1920);
+  ws.shown = 3;
+  assert.deepEqual(layout(ws, rows([rect(0, 0, 1920, 1080)])).get("w0"), rect(0, 0, 1920, 1080));
+});
+
+test("stacked monitors each show `shown` ribbons", () => {
+  const ws = ribbons();
+  ws.shown = 2;
+  const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(0, 1080, 1920, 1080)]));
+  assert.deepEqual(out.get("w1"), rect(0, 540, 1920, 540));
+  assert.deepEqual(out.get("w2"), rect(0, 1080, 1920, 1080));
+});
+
+test("scrolling keeps the focused ribbon shown without leaving empty slots", () => {
+  const ws = ribbons();
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  ws.shown = 2;
+  m.setFocus(ws, "w2");
+  scroll(ws, rs);
+  assert.equal(ws.top, 1);
+  m.setFocus(ws, "w0");
+  scroll(ws, rs);
+  assert.equal(ws.top, 0);
+  ws.top = 2;
+  m.setFocus(ws, "w2");
+  scroll(ws, rs);
+  assert.equal(ws.top, 1);
+});

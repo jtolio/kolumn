@@ -7,19 +7,25 @@ export type Side = Dir | "middle";
 // A cell's share of its column's height is weight / (sum of the column's weights).
 export interface Cell<W> { win: W; weight: number }
 export interface Column<W> { cells: Cell<W>[]; width: number; focus: number }
-export interface Ribbon<W> { columns: Column<W>[]; scroll: number; focus: number }
+// A ribbon's share of its monitor row's height is weight / (sum of the
+// weights of the ribbons shown in that row).
+export interface Ribbon<W> { columns: Column<W>[]; scroll: number; focus: number; weight: number }
 // top is the index of the ribbon shown on the first monitor row.
-export interface Workspace<W> { ribbons: Ribbon<W>[]; top: number; focus: number }
+// shown is how many ribbons each monitor row shows at once.
+export interface Workspace<W> { ribbons: Ribbon<W>[]; top: number; focus: number; shown: number }
 
-interface Pos<W> { ribbon: Ribbon<W>; column: Column<W>; r: number; c: number; k: number }
+export interface Pos<W> { ribbon: Ribbon<W>; column: Column<W>; r: number; c: number; k: number }
 
 const delta = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] } as const;
 
 export const clamp = (i: number, n: number) => Math.max(0, Math.min(i, n - 1));
-export const total = <W>(column: Column<W>) => column.cells.reduce((s, c) => s + c.weight, 0);
+export interface Weighted { weight: number }
+export const total = (items: Weighted[]) => items.reduce((s, c) => s + c.weight, 0);
+// A new cell or ribbon gets the mean weight, so the others keep their proportions.
+const mean = (items: Weighted[]) => total(items) / items.length || 1;
 
-export const workspace = <W>(): Workspace<W> => ({ ribbons: [], top: 0, focus: 0 });
-const ribbon = <W>(): Ribbon<W> => ({ columns: [], scroll: 0, focus: 0 });
+export const workspace = <W>(): Workspace<W> => ({ ribbons: [], top: 0, focus: 0, shown: 1 });
+const ribbon = <W>(ws: Workspace<W>): Ribbon<W> => ({ columns: [], scroll: 0, focus: 0, weight: mean(ws.ribbons) });
 const column = <W>(win: W, width: number): Column<W> => ({ cells: [{ win, weight: 1 }], width, focus: 0 });
 const focused = <W>(column?: Column<W>) => column?.cells[column.focus]?.win;
 
@@ -51,9 +57,8 @@ function prune<W>(ws: Workspace<W>) {
   ws.focus = clamp(ws.focus, ws.ribbons.length);
 }
 
-// A new cell gets the mean weight, so existing cells keep their proportions.
 function insertCell<W>(column: Column<W>, k: number, win: W) {
-  column.cells.splice(k, 0, { win, weight: total(column) / column.cells.length || 1 });
+  column.cells.splice(k, 0, { win, weight: mean(column.cells) });
 }
 
 function insertRight<W>(ribbon: Ribbon<W>, win: W, width: number) {
@@ -68,7 +73,7 @@ function detach<W>(ws: Workspace<W>, win: W) {
 
 // Adds win as a new column right of the focused column in the focused ribbon.
 export function add<W>(ws: Workspace<W>, win: W, width: number) {
-  if (!ws.ribbons.length) ws.ribbons.push(ribbon());
+  if (!ws.ribbons.length) ws.ribbons.push(ribbon(ws));
   insertRight(ws.ribbons[ws.focus], win, width);
 }
 
@@ -104,7 +109,7 @@ export function move<W>(ws: Workspace<W>, win: W, dir: Dir) {
     if (!target) return;
     cells.splice(p.k, 1);
     let acc = 0;
-    const gaps = [0, ...target.cells.map(c => (acc += c.weight) / total(target))];
+    const gaps = [0, ...target.cells.map(c => (acc += c.weight) / total(target.cells))];
     const off = (i: number) => Math.abs(gaps[i] - 0.5);
     insertCell(target, gaps.reduce((best, _, i) => (off(i) <= off(best) + 1e-9 ? i : best), 0), win);
   } else if (cells[p.k + dy]) {
@@ -112,7 +117,7 @@ export function move<W>(ws: Workspace<W>, win: W, dir: Dir) {
   } else {
     cells.splice(p.k, 1);
     let target = ws.ribbons[p.r + dy];
-    if (!target) ws.ribbons.splice(dy > 0 ? ws.ribbons.length : 0, 0, target = ribbon());
+    if (!target) ws.ribbons.splice(dy > 0 ? ws.ribbons.length : 0, 0, target = ribbon(ws));
     insertRight(target, win, p.column.width);
   }
   prune(ws);
@@ -134,29 +139,22 @@ export function drop<W>(ws: Workspace<W>, win: W, target: W, side: Side) {
   prune(ws);
 }
 
-// Moves weight between cell k and its neighbor in direction dy (-1 above,
-// 1 below) so cell k takes `share` of the column. Other cells keep theirs.
-export function resizeCell<W>(column: Column<W>, k: number, dy: number, share: number) {
-  const cell = column.cells[k], other = column.cells[k + dy];
+// Moves weight between items[k] and items[k + dy] so items[k] takes share
+// of the items' total. The other items keep their weights.
+export function resizePair(items: Weighted[], k: number, dy: number, share: number) {
+  const item = items[k], other = items[k + dy];
   if (!other) return;
-  const pair = cell.weight + other.weight;
-  cell.weight = Math.min(Math.max(share * total(column), 0.1 * pair), 0.9 * pair);
-  other.weight = pair - cell.weight;
+  const pair = item.weight + other.weight;
+  item.weight = Math.min(Math.max(share * total(items), 0.1 * pair), 0.9 * pair);
+  other.weight = pair - item.weight;
 }
 
-// Grows win's column width, or its cell's height, by delta pixels, but not
-// below min. height is the column's height in pixels. The cell's new height
-// comes from its weight alone, so the other cells keep their proportions to
-// each other, and it never takes more than 90% of the column.
-export function grow<W>(ws: Workspace<W>, win: W, axis: "width" | "height", delta: number, min: number, height: number) {
-  const p = find(ws, win);
-  if (!p) return;
-  if (axis === "width") {
-    p.column.width = Math.max(p.column.width + delta, min);
-    return;
-  }
-  const cell = p.column.cells[p.k], rest = total(p.column) - cell.weight;
+// Grows items[k] by delta pixels, where height is the pixel height of all
+// the items together, but not below min pixels or above 90% of height.
+// Only its weight changes, so the other items keep their proportions.
+export function growShare(items: Weighted[], k: number, delta: number, min: number, height: number) {
+  const item = items[k], rest = total(items) - item.weight;
   if (!rest) return;
-  const share = Math.min(Math.max(cell.weight / total(p.column) + delta / height, min / height), 0.9);
-  cell.weight = (share * rest) / (1 - share);
+  const share = Math.min(Math.max(item.weight / total(items) + delta / height, min / height), 0.9);
+  item.weight = (share * rest) / (1 - share);
 }

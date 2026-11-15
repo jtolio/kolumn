@@ -136,39 +136,40 @@ test("dropping on the middle swaps windows and leaves weights in place", () => {
   assert.deepEqual(weights(ws, 0, 0), [2, 1]);
 });
 
-test("resizing a cell moves weight only from its neighbor", () => {
+test("resizing moves weight only from the neighbor", () => {
   const ws = build("a", "b", "c");
   m.drop(ws, "b", "a", "down");
   m.drop(ws, "c", "b", "down");
-  m.resizeCell(ws.ribbons[0].columns[0], 1, 1, 0.5);
+  m.resizePair(ws.ribbons[0].columns[0].cells, 1, 1, 0.5);
   assert.deepEqual(weights(ws, 0, 0), [1, 1.5, 0.5]);
 });
 
-test("growing width adds pixels and stops at the minimum width", () => {
-  const ws = build("a");
-  m.grow(ws, "a", "width", 100, 50, 1000);
-  assert.equal(ws.ribbons[0].columns[0].width, 200);
-  m.grow(ws, "a", "width", -300, 50, 1000);
-  assert.equal(ws.ribbons[0].columns[0].width, 50);
-});
-
-test("growing height adds pixels to one cell and keeps the others' proportions", () => {
-  const ws = build("a", "b", "c");
-  m.drop(ws, "b", "a", "down");
-  m.drop(ws, "c", "b", "down");
-  ws.ribbons[0].columns[0].cells[2].weight = 2;
-  m.grow(ws, "a", "height", 200, 0, 1000);
-  const [a, b, c] = weights(ws, 0, 0), sum = a + b + c;
+test("growing a share adds pixels to one item and keeps the others' proportions", () => {
+  const items = [{ weight: 1 }, { weight: 1 }, { weight: 2 }];
+  m.growShare(items, 0, 200, 0, 1000);
+  const [a, b, c] = items.map(i => i.weight), sum = a + b + c;
   assert.ok(Math.abs((a / sum) * 1000 - 450) < 1e-9);
   assert.ok(Math.abs(c / b - 2) < 1e-9);
 });
 
-test("growing height stops at the minimum and at 90% of the column", () => {
-  const ws = build("a", "b");
-  m.drop(ws, "b", "a", "down");
-  const share = () => weights(ws, 0, 0)[0] / (weights(ws, 0, 0)[0] + weights(ws, 0, 0)[1]);
-  m.grow(ws, "a", "height", -1000, 100, 1000);
+test("growing a share stops at the minimum and at 90%", () => {
+  const items = [{ weight: 1 }, { weight: 1 }];
+  const share = () => items[0].weight / (items[0].weight + items[1].weight);
+  m.growShare(items, 0, -1000, 100, 1000);
   assert.ok(Math.abs(share() - 0.1) < 1e-9);
-  m.grow(ws, "a", "height", 5000, 100, 1000);
+  m.growShare(items, 0, 5000, 100, 1000);
   assert.ok(Math.abs(share() - 0.9) < 1e-9);
+});
+
+test("a single item has no share to grow", () => {
+  const items = [{ weight: 1 }];
+  m.growShare(items, 0, 200, 0, 1000);
+  assert.deepEqual(items, [{ weight: 1 }]);
+});
+
+test("a new ribbon gets the mean ribbon weight", () => {
+  const ws = build("a", "b");
+  ws.ribbons[0].weight = 3;
+  m.move(ws, "b", "down");
+  assert.deepEqual(ws.ribbons.map(r => r.weight), [3, 3]);
 });
