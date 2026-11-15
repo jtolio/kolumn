@@ -180,10 +180,10 @@ test("a row shows `shown` ribbons, split by their weights", () => {
   assert.equal(out.get("w2")!.y, 1080);
 });
 
-test("a ribbon alone in its row fills it, even when more could be shown", () => {
+test("a lone ribbon takes only its share, with empty ribbons kept below it", () => {
   const ws = build(1920);
-  ws.shown = 3;
-  assert.deepEqual(layout(ws, rows([rect(0, 0, 1920, 1080)])).get("w0"), rect(0, 0, 1920, 1080));
+  m.show(ws, 3);
+  assert.deepEqual(layout(ws, rows([rect(0, 0, 1920, 1080)])).get("w0"), rect(0, 0, 1920, 360));
 });
 
 test("stacked monitors each show `shown` ribbons", () => {

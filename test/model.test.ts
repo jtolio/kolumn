@@ -6,8 +6,11 @@ import * as m from "../src/model.ts";
 const shape = (ws: m.Workspace<string>) => ws.ribbons.map(r => r.columns.map(c => c.cells.map(cell => cell.win)));
 const weights = (ws: m.Workspace<string>, r: number, c: number) => ws.ribbons[r].columns[c].cells.map(cell => cell.weight);
 
+// One ribbon per row unless a test says otherwise, so empty ribbons kept
+// for the row's minimum don't show up in shapes.
 function build(...wins: string[]) {
   const ws = m.workspace<string>();
+  ws.shown = 1;
   for (const w of wins) {
     m.add(ws, w, 100);
     m.setFocus(ws, w);
@@ -188,4 +191,32 @@ test("a new ribbon gets the mean ribbon weight", () => {
 
 test("a workspace shows two ribbons per row by default", () => {
   assert.equal(m.workspace().shown, 2);
+});
+
+test("a workspace keeps at least as many ribbons as each row shows", () => {
+  const ws = m.workspace<string>();
+  m.add(ws, "a", 100);
+  assert.deepEqual(shape(ws), [[["a"]], []]);
+  m.move(ws, "a", "down");
+  assert.deepEqual(shape(ws), [[], [["a"]]]);
+  m.show(ws, 3);
+  assert.deepEqual(shape(ws), [[], [["a"]], []]);
+  m.show(ws, 1);
+  assert.deepEqual(shape(ws), [[["a"]]]);
+});
+
+test("focus up and down skips empty ribbons", () => {
+  const ws = m.workspace<string>();
+  m.show(ws, 3);
+  m.add(ws, "a", 100);
+  m.add(ws, "b", 100);
+  m.setFocus(ws, "b");
+  m.move(ws, "b", "down");
+  m.setFocus(ws, "b");
+  m.move(ws, "b", "down");
+  assert.deepEqual(shape(ws), [[["a"]], [], [["b"]]]);
+  assert.equal(m.neighbor(ws, "a", "down", anywhere), "b");
+  assert.equal(m.neighbor(ws, "b", "up", anywhere), "a");
+  m.show(ws, 2);
+  assert.deepEqual(shape(ws), [[["a"]], [["b"]]]);
 });

@@ -165,7 +165,7 @@ for (const axis of ["width", "height"] as const) {
 // How many ribbons each monitor row shows, at least 1.
 for (const [verb, delta] of [["More", 1], ["Fewer", -1]] as const) {
   registerShortcut(`kolumn ${verb.toLowerCase()} ribbons`, `kolumn: Show ${verb} Ribbons`, "", () =>
-    withActive(s => { s.ws.shown = Math.max(1, s.ws.shown + delta); refresh(); }));
+    withActive(s => { model.show(s.ws, s.ws.shown + delta); refresh(); }));
 }
 
 workspace.windowAdded.connect(w => { track(w); refresh(); });

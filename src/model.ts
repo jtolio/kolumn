@@ -48,7 +48,9 @@ export function setFocus<W>(ws: Workspace<W>, win: W) {
   p.column.focus = p.k;
 }
 
-// Drops empty columns and ribbons and keeps focus indices in range.
+// Drops empty columns, and empty ribbons while there are more than ws.shown,
+// starting from the bottom. Adds empty ribbons up to ws.shown, so a row
+// always has that many to move windows into. Keeps focus indices in range.
 function prune<W>(ws: Workspace<W>) {
   for (const ribbon of ws.ribbons) {
     ribbon.columns = ribbon.columns.filter(c => c.cells.length > 0);
@@ -56,7 +58,10 @@ function prune<W>(ws: Workspace<W>) {
     ribbon.focus = clamp(ribbon.focus, ribbon.columns.length);
     ribbon.anchor = clamp(ribbon.anchor, ribbon.columns.length);
   }
-  ws.ribbons = ws.ribbons.filter(r => r.columns.length > 0);
+  for (let r = ws.ribbons.length - 1; r >= 0 && ws.ribbons.length > ws.shown; r--) {
+    if (!ws.ribbons[r].columns.length) ws.ribbons.splice(r, 1);
+  }
+  while (ws.ribbons.length < ws.shown) ws.ribbons.push(ribbon(ws));
   ws.focus = clamp(ws.focus, ws.ribbons.length);
 }
 
@@ -76,8 +81,14 @@ function detach<W>(ws: Workspace<W>, win: W) {
 
 // Adds win as a new column right of the focused column in the focused ribbon.
 export function add<W>(ws: Workspace<W>, win: W, width: number) {
-  if (!ws.ribbons.length) ws.ribbons.push(ribbon(ws));
+  prune(ws);
   insertRight(ws.ribbons[ws.focus], win, width);
+}
+
+// Sets how many ribbons each monitor row shows, at least 1.
+export function show<W>(ws: Workspace<W>, shown: number) {
+  ws.shown = Math.max(1, shown);
+  prune(ws);
 }
 
 export function remove<W>(ws: Workspace<W>, win: W) {
@@ -86,14 +97,16 @@ export function remove<W>(ws: Workspace<W>, win: W) {
 }
 
 // The window that focus moves to. Up and down fall through to the column of
-// the next ribbon with the least distance(column), entering it at the cell
-// on the side focus comes from.
+// the next ribbon with windows that has the least distance(column),
+// entering it at the cell on the side focus comes from.
 export function neighbor<W>(ws: Workspace<W>, win: W, dir: Dir, distance: (column: Column<W>) => number): W | undefined {
   const p = find(ws, win);
   if (!p) return;
   const [dx, dy] = delta[dir];
   if (dx) return focused(p.ribbon.columns[p.c + dx]);
-  const own = p.column.cells[p.k + dy]?.win, next = ws.ribbons[p.r + dy];
+  let r = p.r + dy;
+  while (ws.ribbons[r] && !ws.ribbons[r].columns.length) r += dy;
+  const own = p.column.cells[p.k + dy]?.win, next = ws.ribbons[r];
   if (own || !next) return own;
   const column = next.columns.reduce((a, b) => (distance(b) < distance(a) ? b : a));
   return column.cells[dy > 0 ? 0 : column.cells.length - 1].win;

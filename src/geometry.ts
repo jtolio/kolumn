@@ -115,6 +115,7 @@ export function scroll<W>(ws: Workspace<W>, rs: Row[]) {
   if (!ribbon || !rs.length) return;
   const slots = rs.length * ws.shown;
   ws.top = Math.max(0, Math.min(ws.focus, Math.max(ws.top, ws.focus - slots + 1), ws.ribbons.length - slots));
+  if (!ribbon.columns.length) return;
   const row = rs[place(ws, rs, ws.focus).k], f = ribbon.focus, w = ribbon.columns[f].width;
   for (let x = xs(ribbon, row)[f]; ribbon.anchor !== f && (x < row.left || x + w > row.right); x = xs(ribbon, row)[f]) {
     ribbon.anchor += Math.sign(f - ribbon.anchor);
