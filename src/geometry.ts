@@ -103,12 +103,23 @@ export function scroll<W>(ws: Workspace<W>, rs: Row[]) {
 
 // The window under p, other than skip, and which part of it p is in. The
 // outer quarter nearest p picks a side, and anything else is the middle.
+// Over empty space, it is the nearest window level with p, on the side
+// facing p, so a drop there makes a new column next to that window. Over
+// skip's own cell, it is nothing, so the window stays where it was.
 export function hit<W>(rects: Map<W, Rect>, p: { x: number; y: number }, skip: W): [W, Side] | undefined {
+  const own = rects.get(skip);
+  if (own && p.x >= own.x && p.x < own.x + own.width && p.y >= own.y && p.y < own.y + own.height) return;
+  let near: [W, Side] | undefined, best = Infinity;
   for (const [win, r] of rects) {
     const fx = (p.x - r.x) / r.width, fy = (p.y - r.y) / r.height;
-    if (win === skip || fx < 0 || fx >= 1 || fy < 0 || fy >= 1) continue;
-    const sides: [Side, number][] = [["left", fx], ["right", 1 - fx], ["up", fy], ["down", 1 - fy]];
-    const [side, d] = sides.reduce((a, b) => (b[1] < a[1] ? b : a));
-    return [win, d < 0.25 ? side : "middle"];
+    if (win === skip || fy < 0 || fy >= 1) continue;
+    if (fx >= 0 && fx < 1) {
+      const sides: [Side, number][] = [["left", fx], ["right", 1 - fx], ["up", fy], ["down", 1 - fy]];
+      const [side, d] = sides.reduce((a, b) => (b[1] < a[1] ? b : a));
+      return [win, d < 0.25 ? side : "middle"];
+    }
+    const d = fx < 0 ? r.x - p.x : p.x - (r.x + r.width);
+    if (d < best) [near, best] = [[win, fx < 0 ? "left" : "right"], d];
   }
+  return near;
 }

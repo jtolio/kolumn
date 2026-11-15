@@ -82,7 +82,8 @@ The drop rule runs when a move finishes:
    - Left quarter: insert it as a new column to the left of the target's column.
    - Right quarter: insert it as a new column to the right.
    - Middle: swap the two windows.
-3. If there is no target cell, the window snaps back to where it was, because the next `relayout()` puts it back.
+3. If the pointer is over empty space, such as beside a ribbon narrower than its row or in the gap between two windows, the target is the nearest window at the pointer's height. The window becomes a new column on that window's side facing the pointer.
+4. If the pointer is over the dragged window's own cell, or no window is at the pointer's height, the window snaps back to where it was, because the next `relayout()` puts it back.
 
 Dragging never creates a ribbon. Only the keyboard does that.
 
@@ -203,6 +204,6 @@ The code budget is about 400 lines of application code across the three `src` fi
 
 ## Left out on purpose
 
-These are left out because they add concepts or code without being required: floating windows, exemption lists, configurable gaps, drop-preview outlines, live rearranging during a drag, animations, width presets, Meta+wheel scrolling, saving and restoring layouts, Activities support, a config UI, and dropping onto empty space.
+These are left out because they add concepts or code without being required: floating windows, exemption lists, configurable gaps, drop-preview outlines, live rearranging during a drag, animations, width presets, Meta+wheel scrolling, saving and restoring layouts, Activities support, and a config UI.
 
 KWin's Geometry Change desktop effect, which is part of kdeplasma-addons, can animate kolumn's moves with no code in kolumn. You can turn it on in System Settings if you want animations.

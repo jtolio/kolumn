@@ -134,8 +134,20 @@ test("hit picks the nearest outer quarter, or the middle", () => {
   assert.deepEqual(hit(rects, { x: 10, y: 50 }, "b"), ["a", "left"]);
   assert.deepEqual(hit(rects, { x: 50, y: 90 }, "b"), ["a", "down"]);
   assert.deepEqual(hit(rects, { x: 50, y: 50 }, "b"), ["a", "middle"]);
+});
+
+test("over empty space, hit picks the nearest window level with the pointer", () => {
+  const rects = new Map([["a", rect(500, 0, 100, 100)], ["b", rect(600, 0, 100, 100)], ["c", rect(500, 100, 200, 100)]]);
+  assert.deepEqual(hit(rects, { x: 900, y: 50 }, "c"), ["b", "right"]);
+  assert.deepEqual(hit(rects, { x: 10, y: 50 }, "c"), ["a", "left"]);
+  assert.deepEqual(hit(rects, { x: 10, y: 150 }, "a"), ["c", "left"]);
+  assert.deepEqual(hit(rects, { x: 900, y: 50 }, "b"), ["a", "right"]);
+  assert.equal(hit(rects, { x: 900, y: 500 }, "a"), undefined);
+});
+
+test("over the dragged window's own cell, hit finds nothing", () => {
+  const rects = new Map([["a", rect(0, 0, 100, 100)], ["b", rect(100, 0, 100, 100)]]);
   assert.equal(hit(rects, { x: 150, y: 50 }, "b"), undefined);
-  assert.equal(hit(rects, { x: 300, y: 50 }, "b"), undefined);
 });
 
 // Three ribbons of one 1920-wide column each.
