@@ -42,7 +42,10 @@ function span(row: Row, x: number, width: number, f0: number, f1: number): [numb
 
 // The x of each of the ribbon's columns. The row's main monitor holds a run
 // of columns starting at the anchor: as many as fit, added to the right and
-// then, at the end of the ribbon, to the left, and centered as a group.
+// then, at the end of the ribbon, to the left. The run sits against the
+// main monitor's edge on the side with nothing past it, so the columns on
+// the other side fill the rest. It is centered when the whole ribbon fits,
+// or when the columns that would fill the rest are past a seam.
 // Columns outside the run start on the next monitor, never in the main
 // monitor's leftover space. Moving the anchor by one moves one column across
 // the main monitor's edge. The other columns pack outward from the
@@ -59,7 +62,8 @@ function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
   const seams = [...row.monitors.map(m => m.x), ...row.monitors.map(m => m.x + m.width)].filter(s => s > row.left && s < row.right);
   const seam = (x: number, w: number) => seams.find(s => x < s && s < x + w);
   const left = row.main.x, right = left + row.main.width;
-  out[lo] = left + (row.main.width - w) / 2;
+  const end = hi === cs.length - 1, slack = row.main.width - w;
+  out[lo] = left + (end ? (lo > 0 && !seams.includes(left) ? slack : slack / 2) : seams.includes(right) ? slack / 2 : 0);
   for (let i = lo + 1; i < cs.length; i++) {
     const x = i === hi + 1 && seams.includes(right) ? right : out[i - 1] + cs[i - 1].width;
     out[i] = i <= hi ? x : seam(x, cs[i].width) ?? x;

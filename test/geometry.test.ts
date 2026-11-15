@@ -113,6 +113,19 @@ test("removing columns keeps the anchor on an existing column", () => {
   assert.equal(ws.ribbons[0].anchor, 0);
 });
 
+test("the run sits against the side with nothing past it, so its neighbors fill the rest", () => {
+  const ws = build(1000, 1000, 1000);
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  const xs = () => [0, 1, 2].map(i => layout(ws, rs).get(`w${i}`)!.x);
+  assert.deepEqual(xs(), [0, 1000, 2000]);
+  m.setFocus(ws, "w2");
+  scroll(ws, rs);
+  assert.deepEqual(xs(), [-1080, -80, 920]);
+  m.setFocus(ws, "w1");
+  scroll(ws, rs);
+  assert.deepEqual(xs(), [-1000, 0, 1000]);
+});
+
 test("a ribbon that fits on the main monitor is centered there as a whole", () => {
   const ws = build(800, 400);
   const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
