@@ -12,8 +12,11 @@ SceneEffect {
         focus: true
         color: "#cc000000"
 
-        // The same windows kolumn tiles, as in src/main.ts.
-        readonly property var windows: Workspace.stackingOrder.filter(w =>
+        // The same windows kolumn tiles, as in src/main.ts. The list is read
+        // once, when the view is created each time the effect opens, because
+        // stackingOrder and popupWindow have no change signals to bind to.
+        property var windows: []
+        Component.onCompleted: windows = Workspace.stackingOrder.filter(w =>
             w.managed && (w.normalWindow || w.dialog) && !w.popupWindow && !w.minimized
             && (w.onAllDesktops || w.desktops.includes(Workspace.currentDesktop)))
         readonly property rect bounds: {
