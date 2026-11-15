@@ -19,16 +19,18 @@ test("monitors that share a vertical range form one row", () => {
   assert.equal(rs.length, 2);
   assert.deepEqual([rs[0].left, rs[0].right, rs[0].top, rs[0].bottom], [0, 3360, 0, 1080]);
   assert.deepEqual([rs[1].top, rs[1].bottom], [1080, 2160]);
+  assert.deepEqual(rs[0].main, rect(1920, 0, 1440, 900));
+  assert.deepEqual(rs[1].main, rect(0, 1080, 1920, 1080));
 });
 
-test("columns pack from the row's left edge and fill the monitor height", () => {
+test("columns pack edge to edge and fill the monitor height", () => {
   const ws = build(800, 600);
   m.drop(ws, "w1", "w0", "down");
   m.add(ws, "w2", 500);
   const out = layout(ws, rows([rect(0, 30, 1920, 1050)]));
-  assert.deepEqual(out.get("w0"), rect(0, 30, 800, 525));
-  assert.deepEqual(out.get("w1"), rect(0, 555, 800, 525));
-  assert.deepEqual(out.get("w2"), rect(800, 30, 500, 1050));
+  assert.deepEqual(out.get("w0"), rect(310, 30, 800, 525));
+  assert.deepEqual(out.get("w1"), rect(310, 555, 800, 525));
+  assert.deepEqual(out.get("w2"), rect(1110, 30, 500, 1050));
 });
 
 test("a column across a seam takes the smaller monitor's height", () => {
@@ -61,8 +63,8 @@ test("stacked monitors show consecutive ribbons", () => {
   const ws = build(500, 500);
   m.move(ws, "w1", "down");
   const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(0, 1080, 2560, 1440)]));
-  assert.deepEqual(out.get("w0"), rect(0, 0, 500, 1080));
-  assert.deepEqual(out.get("w1"), rect(0, 1080, 500, 1440));
+  assert.deepEqual(out.get("w0"), rect(710, 0, 500, 1080));
+  assert.deepEqual(out.get("w1"), rect(1030, 1080, 500, 1440));
 });
 
 test("scrolling moves just far enough to show the focused column", () => {
@@ -91,6 +93,20 @@ test("closing the last column pulls the ribbon back so it ends at the row's edge
   m.setFocus(ws, "w1");
   scroll(ws, rs);
   assert.equal(ws.ribbons[0].scroll, 0);
+});
+
+test("a ribbon narrower than the row is centered on the main monitor", () => {
+  const ws = build(800, 400);
+  const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
+  assert.deepEqual(out.get("w0"), rect(2600, 0, 800, 1440));
+  assert.deepEqual(out.get("w1"), rect(3400, 0, 400, 1440));
+});
+
+test("a ribbon wider than the main monitor stays inside the row", () => {
+  const ws = build(1500, 1500);
+  const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
+  assert.deepEqual(out.get("w0"), rect(1480, 0, 1500, 1080));
+  assert.deepEqual(out.get("w1"), rect(2980, 0, 1500, 1440));
 });
 
 test("a column wider than the row lines up with the left edge", () => {

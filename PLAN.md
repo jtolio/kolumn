@@ -33,9 +33,9 @@ KWin applies each window's own min and max size limits. A window that cannot gro
 
 kolumn places every window directly in KDE's global coordinate space. KWin then shows whatever lands on each monitor. A window outside every monitor is not drawn.
 
-1. Rows. kolumn groups monitors whose usable vertical ranges overlap into one row. It uses `workspace.clientArea(MaximizeArea, output, desktop)` for each monitor's usable area, which already leaves out Plasma panels. Rows are sorted top to bottom. With a single monitor there is one row.
+1. Rows. kolumn groups monitors whose usable vertical ranges overlap into one row. It uses `workspace.clientArea(MaximizeArea, output, desktop)` for each monitor's usable area, which already leaves out Plasma panels. Rows are sorted top to bottom. With a single monitor there is one row. Each row has a main monitor, which is its first monitor in `workspace.screenOrder`. That list is sorted by Plasma's monitor priority, so the row with the primary monitor has it as its main monitor.
 2. Which ribbon each row shows. Row `k` shows ribbon `top + k`. kolumn stacks ribbons above `top` upward past the top edge of row 0. It stacks ribbons past the last row downward past that row's bottom edge. Ribbons outside the rows end up off-screen.
-3. Horizontal placement. A ribbon's columns are packed edge to edge. They start at the left edge of the row, minus the ribbon's scroll offset. A column may cross a monitor seam. When `main.ts` writes a window's geometry, it insets the window GAP/2 px from its cell on every side, which leaves a GAP px gap between neighboring windows. A column's width includes that gap, so a new column is GAP px wider than the window's own width.
+3. Horizontal placement. A ribbon's columns are packed edge to edge. A ribbon narrower than its row is centered on the row's main monitor, then shifted just enough to stay inside the row's left and right edges. A ribbon at least as wide as its row starts at the row's left edge, minus the ribbon's scroll offset. A column may cross a monitor seam. When `main.ts` writes a window's geometry, it insets the window GAP/2 px from its cell on every side, which leaves a GAP px gap between neighboring windows. A column's width includes that gap, so a new column is GAP px wider than the window's own width.
 4. Column height. A column's vertical extent is the overlap of the usable vertical ranges of the monitors it covers horizontally in its row. A column on one monitor gets that monitor's height. A column across a seam gets the smaller of the two heights. An off-screen column uses the nearest monitor in its row.
 5. Cell height. Each cell gets `weight / sum(weights)` of the column height. The weights are never normalized. Removing a cell leaves the other weights unchanged, so in a column with weights `a, b, c`, removing `a` gives `b` a share of `b/(b+c)`. A new cell gets the mean of the column's existing weights, so it takes `1/(n+1)` of the height and the existing cells keep their proportions to each other.
 6. Scrolling. When the focused window changes, kolumn scrolls as little as possible:
@@ -59,7 +59,7 @@ kolumn places every window directly in KDE's global coordinate space. KWin then 
 | `windowActivated` | See the Focus section. |
 | `interactiveMoveResizeStarted` | Record the window's start geometry and whether this is a move or a resize. |
 | `interactiveMoveResizeFinished` | Apply the drop rule or the resize rule, then call `relayout()`. |
-| `screensChanged`, `virtualScreenGeometryChanged` | Call `relayout()`. |
+| `screensChanged`, `screenOrderChanged`, `virtualScreenGeometryChanged` | Call `relayout()`. |
 
 A window that is on all desktops goes in the workspace of the current desktop when it is added.
 

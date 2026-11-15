@@ -17,10 +17,10 @@ interface Win {
   interactiveMoveResizeStarted: Signal; interactiveMoveResizeFinished: Signal;
 }
 declare const workspace: {
-  activeWindow: Win | null; currentDesktop: Desktop; screens: object[]; cursorPos: { x: number; y: number };
+  activeWindow: Win | null; currentDesktop: Desktop; screenOrder: object[]; cursorPos: { x: number; y: number };
   windowList(): Win[]; clientArea(option: number, output: object, desktop: Desktop): Rect;
   windowAdded: Signal<[Win]>; windowRemoved: Signal<[Win]>; windowActivated: Signal<[Win]>;
-  screensChanged: Signal; virtualScreenGeometryChanged: Signal;
+  screensChanged: Signal; screenOrderChanged: Signal; virtualScreenGeometryChanged: Signal;
 };
 declare const KWin: { MaximizeArea: number; ElectricLeft: number; ElectricRight: number; ElectricTop: number; ElectricBottom: number };
 declare function registerShortcut(name: string, text: string, keys: string, f: () => void): void;
@@ -37,7 +37,8 @@ const copy = (r: Rect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.hei
 // half of it on every side, so a cell is GAP larger than its window.
 const GAP = 6;
 const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r.width - GAP, height: r.height - GAP });
-const rowsOf = (desktop: Desktop) => rows(workspace.screens.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
+// screenOrder lists monitors by priority, with the primary monitor first.
+const rowsOf = (desktop: Desktop) => rows(workspace.screenOrder.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
 
 // A window on all desktops has no desktops listed and joins the current one.
 function add(w: Win) {
@@ -148,6 +149,7 @@ workspace.windowAdded.connect(w => { track(w); refresh(); });
 workspace.windowRemoved.connect(w => { remove(w); refresh(); });
 workspace.windowActivated.connect(refresh);
 workspace.screensChanged.connect(refresh);
+workspace.screenOrderChanged.connect(refresh);
 workspace.virtualScreenGeometryChanged.connect(refresh);
 workspace.windowList().forEach(track);
 refresh();
