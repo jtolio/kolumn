@@ -78,6 +78,21 @@ test("scrolling moves just far enough to show the focused column", () => {
   assert.equal(ws.ribbons[0].scroll, 0);
 });
 
+test("closing the last column pulls the ribbon back so it ends at the row's edge", () => {
+  const ws = build(800, 800, 800, 800);
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  scroll(ws, rs);
+  assert.equal(ws.ribbons[0].scroll, 1280);
+  m.remove(ws, "w3");
+  m.setFocus(ws, "w2");
+  scroll(ws, rs);
+  assert.equal(ws.ribbons[0].scroll, 480);
+  m.remove(ws, "w2");
+  m.setFocus(ws, "w1");
+  scroll(ws, rs);
+  assert.equal(ws.ribbons[0].scroll, 0);
+});
+
 test("a column wider than the row lines up with the left edge", () => {
   const ws = build(500, 3000);
   scroll(ws, rows([rect(0, 0, 1920, 1080)]));

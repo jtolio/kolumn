@@ -60,15 +60,17 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
 
 // Scrolls as little as possible so the focused ribbon is on a row and its
 // focused column fits between the row's left and right edges. A column
-// wider than the row lines up with the left edge.
+// wider than the row lines up with the left edge. The ribbon never scrolls
+// past its last column, so closing a column at the end pulls the rest back.
 export function scroll<W>(ws: Workspace<W>, rs: Row[]) {
   const ribbon = ws.ribbons[ws.focus];
   if (!ribbon || !rs.length) return;
   ws.top = Math.min(ws.focus, Math.max(ws.top, ws.focus - rs.length + 1));
-  const row = rs[ws.focus - ws.top];
+  const row = rs[ws.focus - ws.top], width = row.right - row.left;
   const start = ribbon.columns.slice(0, ribbon.focus).reduce((s, c) => s + c.width, 0);
   const end = start + ribbon.columns[ribbon.focus].width;
-  ribbon.scroll = Math.min(start, Math.max(ribbon.scroll, end - (row.right - row.left)));
+  const last = ribbon.columns.reduce((s, c) => s + c.width, 0) - width;
+  ribbon.scroll = Math.max(0, Math.min(start, last, Math.max(ribbon.scroll, end - width)));
 }
 
 // The window under p, other than skip, and which part of it p is in. The

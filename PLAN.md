@@ -39,7 +39,7 @@ kolumn places every window directly in KDE's global coordinate space. KWin then 
 4. Column height. A column's vertical extent is the overlap of the usable vertical ranges of the monitors it covers horizontally in its row. A column on one monitor gets that monitor's height. A column across a seam gets the smaller of the two heights. An off-screen column uses the nearest monitor in its row.
 5. Cell height. Each cell gets `weight / sum(weights)` of the column height. The weights are never normalized. Removing a cell leaves the other weights unchanged, so in a column with weights `a, b, c`, removing `a` gives `b` a share of `b/(b+c)`. A new cell gets the mean of the column's existing weights, so it takes `1/(n+1)` of the height and the existing cells keep their proportions to each other.
 6. Scrolling. When the focused window changes, kolumn scrolls as little as possible:
-   - Horizontally, it changes the focused ribbon's offset just enough to fit the column inside the row's left and right edges. A column wider than the row is aligned to the left edge.
+   - Horizontally, it changes the focused ribbon's offset just enough to fit the column inside the row's left and right edges. A column wider than the row is aligned to the left edge. The offset never goes past the point where the ribbon's last column ends at the row's right edge, so closing a column at the end pulls the others back instead of leaving empty space.
    - Vertically, it changes `top` just enough to put the focused ribbon on a visible row.
 
    Other ribbons keep their offsets.
