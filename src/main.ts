@@ -10,7 +10,7 @@ import { hit, layout, rows, scroll, type Rect } from "./geometry.ts";
 interface Signal<A extends unknown[] = []> { connect(f: (...args: A) => void): void }
 interface Desktop { id: string }
 interface Win {
-  managed: boolean; normalWindow: boolean; dialog: boolean;
+  managed: boolean; normalWindow: boolean; dialog: boolean; popupWindow: boolean;
   minimized: boolean; fullScreen: boolean; maximizeMode: number; move: boolean;
   frameGeometry: Rect; desktops: Desktop[];
   minimizedChanged: Signal; desktopsChanged: Signal;
@@ -89,8 +89,10 @@ function resized(s: Space, w: Win, start: Rect) {
   model.resizeCell(p.column, p.k, dy, (g.height + GAP) / height);
 }
 
+// KWin's own windows, such as decoration button tooltips, report type
+// Normal, but their Qt popup flag marks them as popups.
 function track(w: Win) {
-  if (!(w.managed && (w.normalWindow || w.dialog))) return;
+  if (!(w.managed && (w.normalWindow || w.dialog) && !w.popupWindow)) return;
   let start: Rect, moving: boolean;
   const rehome = () => { remove(w); add(w); refresh(); };
   w.minimizedChanged.connect(rehome);

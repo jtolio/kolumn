@@ -14,7 +14,7 @@ SceneEffect {
 
         // The same windows kolumn tiles, as in src/main.ts.
         readonly property var windows: Workspace.stackingOrder.filter(w =>
-            w.managed && (w.normalWindow || w.dialog) && !w.minimized
+            w.managed && (w.normalWindow || w.dialog) && !w.popupWindow && !w.minimized
             && (w.onAllDesktops || w.desktops.includes(Workspace.currentDesktop)))
         readonly property rect bounds: {
             const gs = windows.map(w => w.frameGeometry);

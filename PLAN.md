@@ -20,7 +20,7 @@ kolumn deletes a column when its last cell leaves, and deletes a ribbon when its
 
 ## What kolumn tiles
 
-kolumn tiles any window where `managed && (normalWindow || dialog)`. This covers app main windows and their dialogs. It leaves out panels, the desktop, notifications, OSDs, menus, and tooltips. KWin keeps handling those as it does now.
+kolumn tiles any window where `managed && (normalWindow || dialog) && !popupWindow`. This covers app main windows and their dialogs. It leaves out panels, the desktop, notifications, OSDs, menus, and tooltips. KWin keeps handling those as it does now. The `popupWindow` check is needed for KWin's own windows, such as the tooltips on decoration buttons. They count as managed and always report type Normal (`kwin/src/internalwindow.cpp:65-68`, `152-155`), but Qt's popup flag makes them popups (`internalwindow.cpp:162-168`).
 
 These windows are tiled, but kolumn does not set their geometry:
 
