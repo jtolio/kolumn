@@ -9,7 +9,8 @@ export interface Cell<W> { win: W; weight: number }
 export interface Column<W> { cells: Cell<W>[]; width: number; focus: number }
 // A ribbon's share of its monitor row's height is weight / (sum of the
 // weights of the ribbons shown in that row).
-export interface Ribbon<W> { columns: Column<W>[]; scroll: number; focus: number; weight: number }
+// anchor is the index of the column centered on the main monitor.
+export interface Ribbon<W> { columns: Column<W>[]; anchor: number; focus: number; weight: number }
 // top is the index of the ribbon shown on the first monitor row.
 // shown is how many ribbons each monitor row shows at once.
 export interface Workspace<W> { ribbons: Ribbon<W>[]; top: number; focus: number; shown: number }
@@ -25,7 +26,7 @@ export const total = (items: Weighted[]) => items.reduce((s, c) => s + c.weight,
 const mean = (items: Weighted[]) => total(items) / items.length || 1;
 
 export const workspace = <W>(): Workspace<W> => ({ ribbons: [], top: 0, focus: 0, shown: 2 });
-const ribbon = <W>(ws: Workspace<W>): Ribbon<W> => ({ columns: [], scroll: 0, focus: 0, weight: mean(ws.ribbons) });
+const ribbon = <W>(ws: Workspace<W>): Ribbon<W> => ({ columns: [], anchor: 0, focus: 0, weight: mean(ws.ribbons) });
 const column = <W>(win: W, width: number): Column<W> => ({ cells: [{ win, weight: 1 }], width, focus: 0 });
 const focused = <W>(column?: Column<W>) => column?.cells[column.focus]?.win;
 
@@ -52,6 +53,7 @@ function prune<W>(ws: Workspace<W>) {
     ribbon.columns = ribbon.columns.filter(c => c.cells.length > 0);
     for (const column of ribbon.columns) column.focus = clamp(column.focus, column.cells.length);
     ribbon.focus = clamp(ribbon.focus, ribbon.columns.length);
+    ribbon.anchor = clamp(ribbon.anchor, ribbon.columns.length);
   }
   ws.ribbons = ws.ribbons.filter(r => r.columns.length > 0);
   ws.focus = clamp(ws.focus, ws.ribbons.length);

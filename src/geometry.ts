@@ -40,43 +40,22 @@ function span(row: Row, x: number, width: number, f0: number, f1: number): [numb
   return [Math.max(...ms.map(m => m.y + m.height * f0)), Math.min(...ms.map(m => m.y + m.height * f1))];
 }
 
-const width = <W>(ribbon: Ribbon<W>) => ribbon.columns.reduce((s, c) => s + c.width, 0);
-
-// Where the ribbon's first column starts. A ribbon narrower than the row is
-// centered on the row's main monitor, but kept inside the row. A wider one
-// starts at the row's left edge minus its scroll offset.
-function origin<W>(ribbon: Ribbon<W>, row: Row) {
-  const w = width(ribbon), m = row.main;
-  if (w >= row.right - row.left) return row.left - ribbon.scroll;
-  return Math.min(Math.max(m.x + (m.width - w) / 2, row.left), row.right - w);
-}
-
-// The x of each of the ribbon's columns. They pack edge to edge from
-// origin(). A focused column on a seam between two monitors moves onto the
-// one holding more of it, or onto the other one, if that keeps it inside the
-// row. Then, working outward both ways from the focused
-// column, a column that would cross a seam moves past it and leaves a
-// blank. Working from the focused column keeps it on screen. Columns may
-// still run past the row's outer edges.
+// The x of each of the ribbon's columns. The anchor column is centered on
+// the row's main monitor, and the others pack outward from it both ways. A
+// column that would cross a seam between two monitors moves past it and
+// leaves a blank. Columns may run past the row's outer edges. Positions
+// depend only on the anchor, never on focus.
 function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
-  const cs = ribbon.columns, out: number[] = [];
-  let x = origin(ribbon, row);
-  for (const c of cs) {
-    out.push(x);
-    x += c.width;
-  }
+  const cs = ribbon.columns, out: number[] = [], a = clamp(ribbon.anchor, cs.length);
+  if (!cs.length) return out;
   const seams = [...row.monitors.map(m => m.x), ...row.monitors.map(m => m.x + m.width)].filter(s => s > row.left && s < row.right);
   const seam = (x: number, w: number) => seams.find(s => x < s && s < x + w);
-  const p = clamp(ribbon.focus, cs.length), w = cs[p]?.width, s = cs.length ? seam(out[p], w) : undefined;
-  if (s !== undefined) {
-    const sides = s - out[p] > out[p] + w - s ? [s - w, s] : [s, s - w];
-    out[p] = sides.find(x => x >= row.left && x + w <= row.right) ?? out[p];
-  }
-  for (let i = p + 1; i < cs.length; i++) {
+  out[a] = row.main.x + (row.main.width - cs[a].width) / 2;
+  for (let i = a + 1; i < cs.length; i++) {
     const x = out[i - 1] + cs[i - 1].width;
     out[i] = seam(x, cs[i].width) ?? x;
   }
-  for (let i = p - 1; i >= 0; i--) {
+  for (let i = a - 1; i >= 0; i--) {
     const x = out[i + 1] - cs[i].width, s = seam(x, cs[i].width);
     out[i] = s === undefined ? x : s - cs[i].width;
   }
@@ -117,21 +96,20 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   return out;
 }
 
-// Scrolls as little as possible so the focused ribbon is shown and its
-// focused column fits between its row's left and right edges. A column
-// wider than the row lines up with the left edge. Scrolling never goes past
-// the last ribbon or the last column, so closing one at the end pulls the
-// rest back.
+// Scrolls as little as possible so the focused ribbon is shown, then steps
+// its anchor one column at a time toward the focused column until that
+// column is fully inside its row. A fully visible focused column moves
+// nothing. Scrolling never goes past the last ribbon, so closing one at the
+// end pulls the rest back.
 export function scroll<W>(ws: Workspace<W>, rs: Row[]) {
   const ribbon = ws.ribbons[ws.focus];
   if (!ribbon || !rs.length) return;
   const slots = rs.length * ws.shown;
   ws.top = Math.max(0, Math.min(ws.focus, Math.max(ws.top, ws.focus - slots + 1), ws.ribbons.length - slots));
-  const row = rs[place(ws, rs, ws.focus).k], rowWidth = row.right - row.left;
-  const start = ribbon.columns.slice(0, ribbon.focus).reduce((s, c) => s + c.width, 0);
-  const end = start + ribbon.columns[ribbon.focus].width;
-  const last = width(ribbon) - rowWidth;
-  ribbon.scroll = Math.max(0, Math.min(start, last, Math.max(ribbon.scroll, end - rowWidth)));
+  const row = rs[place(ws, rs, ws.focus).k], f = ribbon.focus, w = ribbon.columns[f].width;
+  for (let x = xs(ribbon, row)[f]; ribbon.anchor !== f && (x < row.left || x + w > row.right); x = xs(ribbon, row)[f]) {
+    ribbon.anchor += Math.sign(f - ribbon.anchor);
+  }
 }
 
 // The window under p, other than skip, and which part of it p is in. The

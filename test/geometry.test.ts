@@ -25,21 +25,20 @@ test("monitors that share a vertical range form one row", () => {
   assert.deepEqual(rs[1].main, rect(0, 1080, 1920, 1080));
 });
 
-test("columns pack edge to edge and fill the monitor height", () => {
+test("the anchor column is centered on the main monitor and the rest pack outward", () => {
   const ws = build(800, 600);
   m.drop(ws, "w1", "w0", "down");
   m.add(ws, "w2", 500);
   const out = layout(ws, rows([rect(0, 30, 1920, 1050)]));
-  assert.deepEqual(out.get("w0"), rect(310, 30, 800, 525));
-  assert.deepEqual(out.get("w1"), rect(310, 555, 800, 525));
-  assert.deepEqual(out.get("w2"), rect(1110, 30, 500, 1050));
+  assert.deepEqual(out.get("w0"), rect(560, 30, 800, 525));
+  assert.deepEqual(out.get("w1"), rect(560, 555, 800, 525));
+  assert.deepEqual(out.get("w2"), rect(1360, 30, 500, 1050));
 });
 
 test("a column that would cross a seam moves past it, leaving a blank", () => {
   const ws = build(1500, 1000, 500);
-  m.setFocus(ws, "w0");
   const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
-  assert.deepEqual(out.get("w0"), rect(0, 0, 1500, 1080));
+  assert.deepEqual(out.get("w0"), rect(210, 0, 1500, 1080));
   assert.deepEqual(out.get("w1"), rect(1920, 0, 1000, 900));
   assert.deepEqual(out.get("w2"), rect(2920, 0, 500, 900));
 });
@@ -47,19 +46,20 @@ test("a column that would cross a seam moves past it, leaving a blank", () => {
 test("a column that cannot avoid a seam takes the smaller monitor's height", () => {
   const ws = build(3000);
   const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
-  assert.deepEqual(out.get("w0"), rect(0, 0, 3000, 900));
+  assert.deepEqual(out.get("w0"), rect(-540, 0, 3000, 900));
 });
 
-test("blanks work outward from the main monitor's center, leftward too", () => {
+test("blanks work leftward from the anchor too", () => {
   const ws = build(800, 800, 800);
+  ws.ribbons[0].anchor = 2;
   const out = layout(ws, rows([rect(1440, 0, 1920, 1080), rect(0, 0, 1440, 1080)]));
-  assert.deepEqual([0, 1, 2].map(i => out.get(`w${i}`)!.x), [640, 1760, 2560]);
+  assert.deepEqual([0, 1, 2].map(i => out.get(`w${i}`)!.x), [-160, 640, 2000]);
 });
 
 test("an off-screen column uses the nearest monitor", () => {
   const ws = build(1000, 1000, 1000, 1000);
   const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
-  assert.deepEqual(out.get("w3"), rect(3000, 0, 1000, 900));
+  assert.deepEqual(out.get("w3"), rect(3920, 0, 1000, 900));
 });
 
 test("ribbons off the rows stack above and below them", () => {
@@ -82,52 +82,48 @@ test("stacked monitors show consecutive ribbons", () => {
   assert.deepEqual(out.get("w1"), rect(1030, 1080, 500, 1440));
 });
 
-test("scrolling moves just far enough to show the focused column", () => {
-  const ws = build(800, 800, 800);
+test("focusing a fully visible column moves nothing", () => {
+  const ws = build(600, 600, 600);
   const rs = rows([rect(0, 0, 1920, 1080)]);
-  scroll(ws, rs);
-  assert.equal(ws.ribbons[0].scroll, 480);
-  m.setFocus(ws, "w1");
-  scroll(ws, rs);
-  assert.equal(ws.ribbons[0].scroll, 480);
   m.setFocus(ws, "w0");
   scroll(ws, rs);
-  assert.equal(ws.ribbons[0].scroll, 0);
-});
-
-test("closing the last column pulls the ribbon back so it ends at the row's edge", () => {
-  const ws = build(800, 800, 800, 800);
-  const rs = rows([rect(0, 0, 1920, 1080)]);
-  scroll(ws, rs);
-  assert.equal(ws.ribbons[0].scroll, 1280);
-  m.remove(ws, "w3");
-  m.setFocus(ws, "w2");
-  scroll(ws, rs);
-  assert.equal(ws.ribbons[0].scroll, 480);
-  m.remove(ws, "w2");
+  const before = layout(ws, rs);
   m.setFocus(ws, "w1");
   scroll(ws, rs);
-  assert.equal(ws.ribbons[0].scroll, 0);
+  assert.deepEqual(layout(ws, rs), before);
+  assert.equal(ws.ribbons[0].anchor, 0);
 });
 
-test("a ribbon narrower than the row is centered on the main monitor", () => {
+test("focusing a column that is cut off steps the anchor toward it until it shows", () => {
+  const ws = build(600, 600, 600, 600);
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  m.setFocus(ws, "w3");
+  scroll(ws, rs);
+  assert.equal(ws.ribbons[0].anchor, 2);
+  m.setFocus(ws, "w0");
+  scroll(ws, rs);
+  assert.equal(ws.ribbons[0].anchor, 1);
+});
+
+test("removing columns keeps the anchor on an existing column", () => {
+  const ws = build(600, 600, 600);
+  ws.ribbons[0].anchor = 2;
+  m.remove(ws, "w2");
+  m.remove(ws, "w1");
+  assert.equal(ws.ribbons[0].anchor, 0);
+});
+
+test("the anchor column is centered even on a wide multi-monitor row", () => {
   const ws = build(800, 400);
   const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
-  assert.deepEqual(out.get("w0"), rect(2600, 0, 800, 1440));
-  assert.deepEqual(out.get("w1"), rect(3400, 0, 400, 1440));
+  assert.deepEqual(out.get("w0"), rect(2800, 0, 800, 1440));
+  assert.deepEqual(out.get("w1"), rect(3600, 0, 400, 1440));
 });
 
-test("a ribbon wider than the main monitor stays inside the row", () => {
-  const ws = build(1500, 1500);
-  const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
-  assert.deepEqual(out.get("w0"), rect(420, 0, 1500, 1080));
-  assert.deepEqual(out.get("w1"), rect(2980, 0, 1500, 1440));
-});
-
-test("a column wider than the row lines up with the left edge", () => {
+test("a column wider than the row becomes the anchor and stays centered", () => {
   const ws = build(500, 3000);
   scroll(ws, rows([rect(0, 0, 1920, 1080)]));
-  assert.equal(ws.ribbons[0].scroll, 500);
+  assert.equal(ws.ribbons[0].anchor, 1);
 });
 
 test("scrolling brings the focused ribbon onto a row", () => {
@@ -228,20 +224,10 @@ test("ribbons sharing a row never overlap across a seam", () => {
   assert.equal(below.y + below.height, 900);
 });
 
-test("blanks never push the focused column off screen", () => {
+test("scrolling always shows the focused column despite blanks", () => {
   const ws = build(1500, 1000, 1000, 600);
   const rs = rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]);
   scroll(ws, rs);
   const r = layout(ws, rs).get("w3")!;
-  assert.ok(r.x >= 1920 && r.x + r.width <= 3360, `w3 at ${r.x}`);
-  assert.ok(layout(ws, rs).get("w2")!.x + 1000 <= 1920, "w2 moved fully onto the left monitor");
-});
-
-test("a focused column on a seam moves onto the monitor holding more of it", () => {
-  const ws = build(1700, 500);
-  ws.ribbons[0].scroll = 0;
-  const rs = rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]);
-  assert.equal(layout(ws, rs).get("w1")!.x, 1920);
-  m.setFocus(ws, "w0");
-  assert.equal(layout(ws, rs).get("w0")!.x, 0);
+  assert.ok(r.x >= 0 && r.x + r.width <= 3360, `w3 at ${r.x}`);
 });
