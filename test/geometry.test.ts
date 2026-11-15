@@ -198,3 +198,19 @@ test("scrolling keeps the focused ribbon shown without leaving empty slots", () 
   scroll(ws, rs);
   assert.equal(ws.top, 1);
 });
+
+test("ribbons sharing a row never overlap across a seam", () => {
+  // Ribbon 0 has one column on the taller monitor. Ribbon 1's second
+  // column crosses the seam directly below it.
+  const ws = build(1900, 1500);
+  m.move(ws, "w1", "down");
+  m.setFocus(ws, "w1");
+  m.add(ws, "w2", 1000);
+  ws.shown = 2;
+  const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
+  const above = out.get("w0")!, below = out.get("w2")!;
+  assert.ok(below.x < above.x + above.width, "the columns overlap horizontally");
+  assert.equal(above.y + above.height, 540);
+  assert.equal(below.y, 540);
+  assert.equal(below.y + below.height, 900);
+});

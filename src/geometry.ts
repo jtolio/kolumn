@@ -26,15 +26,18 @@ export function rows(monitors: Rect[]): Row[] {
   return out;
 }
 
-// The vertical range shared by the monitors that a column covers. A column
-// that covers no monitor uses the nearest one.
-function span(row: Row, x: number, width: number): [number, number] {
+// The vertical range a column gets when its ribbon has the band from
+// fraction f0 to f1 of each monitor's height. It is the overlap of that band
+// on every monitor the column covers, so columns of different ribbons never
+// overlap, even across a seam. A column that covers no monitor uses the
+// nearest one.
+function span(row: Row, x: number, width: number, f0: number, f1: number): [number, number] {
   let ms = row.monitors.filter(m => m.x < x + width && m.x + m.width > x);
   if (!ms.length) {
     const dist = (m: Rect) => Math.abs(m.x + m.width / 2 - (x + width / 2));
     ms = [row.monitors.reduce((a, b) => (dist(a) <= dist(b) ? a : b))];
   }
-  return [Math.max(...ms.map(m => m.y)), Math.min(...ms.map(m => m.y + m.height))];
+  return [Math.max(...ms.map(m => m.y + m.height * f0)), Math.min(...ms.map(m => m.y + m.height * f1))];
 }
 
 const width = <W>(ribbon: Ribbon<W>) => ribbon.columns.reduce((s, c) => s + c.width, 0);
@@ -69,9 +72,8 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
     const f0 = total(group.slice(0, group.indexOf(ribbon))) / total(group), f = ribbon.weight / total(group);
     let x = origin(ribbon, row);
     for (const column of ribbon.columns) {
-      const [top, bottom] = span(row, x, column.width);
-      const y0 = top + (bottom - top) * f0, h = (bottom - top) * f;
-      const at = (acc: number) => Math.round(y0 + (h * acc) / total(column.cells));
+      const [top, bottom] = span(row, x, column.width, f0, f0 + f);
+      const at = (acc: number) => Math.round(top + ((bottom - top) * acc) / total(column.cells));
       let acc = 0;
       for (const cell of column.cells) {
         const y = at(acc);
