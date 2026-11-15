@@ -9,7 +9,8 @@ export interface Cell<W> { win: W; weight: number }
 export interface Column<W> { cells: Cell<W>[]; width: number; focus: number }
 // A ribbon's share of its monitor row's height is weight / (sum of the
 // weights of the ribbons shown in that row).
-// anchor is the index of the column centered on the main monitor.
+// anchor is the index of the column that the main monitor's run of
+// columns grows from.
 export interface Ribbon<W> { columns: Column<W>[]; anchor: number; focus: number; weight: number }
 // top is the index of the ribbon shown on the first monitor row.
 // shown is how many ribbons each monitor row shows at once.

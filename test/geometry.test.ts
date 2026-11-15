@@ -25,14 +25,14 @@ test("monitors that share a vertical range form one row", () => {
   assert.deepEqual(rs[1].main, rect(0, 1080, 1920, 1080));
 });
 
-test("the anchor column is centered on the main monitor and the rest pack outward", () => {
+test("the main monitor holds as many columns as fit, centered as a group", () => {
   const ws = build(800, 600);
   m.drop(ws, "w1", "w0", "down");
   m.add(ws, "w2", 500);
   const out = layout(ws, rows([rect(0, 30, 1920, 1050)]));
-  assert.deepEqual(out.get("w0"), rect(560, 30, 800, 525));
-  assert.deepEqual(out.get("w1"), rect(560, 555, 800, 525));
-  assert.deepEqual(out.get("w2"), rect(1360, 30, 500, 1050));
+  assert.deepEqual(out.get("w0"), rect(310, 30, 800, 525));
+  assert.deepEqual(out.get("w1"), rect(310, 555, 800, 525));
+  assert.deepEqual(out.get("w2"), rect(1110, 30, 500, 1050));
 });
 
 test("a column that would cross a seam moves past it, leaving a blank", () => {
@@ -49,11 +49,11 @@ test("a column that cannot avoid a seam takes the smaller monitor's height", () 
   assert.deepEqual(out.get("w0"), rect(-540, 0, 3000, 900));
 });
 
-test("blanks work leftward from the anchor too", () => {
+test("blanks work leftward from the main monitor's run too", () => {
   const ws = build(800, 800, 800);
   ws.ribbons[0].anchor = 2;
   const out = layout(ws, rows([rect(1440, 0, 1920, 1080), rect(0, 0, 1440, 1080)]));
-  assert.deepEqual([0, 1, 2].map(i => out.get(`w${i}`)!.x), [-160, 640, 2000]);
+  assert.deepEqual([0, 1, 2].map(i => out.get(`w${i}`)!.x), [640, 1600, 2400]);
 });
 
 test("an off-screen column uses the nearest monitor", () => {
@@ -113,11 +113,11 @@ test("removing columns keeps the anchor on an existing column", () => {
   assert.equal(ws.ribbons[0].anchor, 0);
 });
 
-test("the anchor column is centered even on a wide multi-monitor row", () => {
+test("a ribbon that fits on the main monitor is centered there as a whole", () => {
   const ws = build(800, 400);
   const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
-  assert.deepEqual(out.get("w0"), rect(2800, 0, 800, 1440));
-  assert.deepEqual(out.get("w1"), rect(3600, 0, 400, 1440));
+  assert.deepEqual(out.get("w0"), rect(2600, 0, 800, 1440));
+  assert.deepEqual(out.get("w1"), rect(3400, 0, 400, 1440));
 });
 
 test("a column wider than the row becomes the anchor and stays centered", () => {
@@ -230,4 +230,28 @@ test("scrolling always shows the focused column despite blanks", () => {
   scroll(ws, rs);
   const r = layout(ws, rs).get("w3")!;
   assert.ok(r.x >= 0 && r.x + r.width <= 3360, `w3 at ${r.x}`);
+});
+
+test("with the main monitor on the right, hovering any window moves nothing", () => {
+  // A ribbon of three that nearly fits the main monitor, above one of five
+  // where three fit. Every window should end up fully on one monitor, so
+  // focus follows mouse never makes the view move.
+  const rs = rows([rect(1920, 0, 2898, 1800), rect(0, 0, 1920, 1080)]);
+  const ws = m.workspace<string>();
+  const open = (w: string, width: number) => { m.add(ws, w, width); m.setFocus(ws, w); scroll(ws, rs); };
+  ["a0", "a1", "a2"].forEach(w => open(w, 1000));
+  open("b0", 900);
+  m.move(ws, "b0", "down");
+  m.setFocus(ws, "b0");
+  scroll(ws, rs);
+  ["b1", "b2", "b3", "b4"].forEach(w => open(w, 900));
+  const seams = (g: Rect) => g.x < 1920 && g.x + g.width > 1920;
+  for (const w of ["a0", "a1", "a2", "b0", "b1", "b2", "b3", "b4"]) {
+    const before = layout(ws, rs), g = before.get(w)!;
+    assert.ok(g.x >= 0 && g.x + g.width <= 4818 && !seams(g), `${w} at ${g.x}..${g.x + g.width}`);
+    m.setFocus(ws, w);
+    scroll(ws, rs);
+    assert.deepEqual(layout(ws, rs), before, `hovering ${w} moved windows`);
+  }
+  assert.deepEqual(["a0", "a1", "a2"].map(w => layout(ws, rs).get(w)!.x), [920, 2369, 3369]);
 });

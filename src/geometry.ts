@@ -40,22 +40,30 @@ function span(row: Row, x: number, width: number, f0: number, f1: number): [numb
   return [Math.max(...ms.map(m => m.y + m.height * f0)), Math.min(...ms.map(m => m.y + m.height * f1))];
 }
 
-// The x of each of the ribbon's columns. The anchor column is centered on
-// the row's main monitor, and the others pack outward from it both ways. A
-// column that would cross a seam between two monitors moves past it and
-// leaves a blank. Columns may run past the row's outer edges. Positions
-// depend only on the anchor, never on focus.
+// The x of each of the ribbon's columns. The row's main monitor holds a run
+// of columns around the anchor: as many as fit, added alternately right and
+// left, and centered as a group. The other columns pack outward from the
+// run both ways. A column that would cross a seam between two monitors
+// moves past it and leaves a blank. Columns may run past the row's outer
+// edges. Positions depend only on the anchor, never on focus.
 function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
-  const cs = ribbon.columns, out: number[] = [], a = clamp(ribbon.anchor, cs.length);
+  const cs = ribbon.columns, out: number[] = [];
   if (!cs.length) return out;
+  let lo = clamp(ribbon.anchor, cs.length), hi = lo, w = cs[lo].width;
+  const fits = (i: number) => i >= 0 && i < cs.length && w + cs[i].width <= row.main.width;
+  for (let grew = true; grew; ) {
+    grew = false;
+    if (fits(hi + 1)) [w, grew] = [w + cs[++hi].width, true];
+    if (fits(lo - 1)) [w, grew] = [w + cs[--lo].width, true];
+  }
   const seams = [...row.monitors.map(m => m.x), ...row.monitors.map(m => m.x + m.width)].filter(s => s > row.left && s < row.right);
   const seam = (x: number, w: number) => seams.find(s => x < s && s < x + w);
-  out[a] = row.main.x + (row.main.width - cs[a].width) / 2;
-  for (let i = a + 1; i < cs.length; i++) {
+  out[lo] = row.main.x + (row.main.width - w) / 2;
+  for (let i = lo + 1; i < cs.length; i++) {
     const x = out[i - 1] + cs[i - 1].width;
-    out[i] = seam(x, cs[i].width) ?? x;
+    out[i] = i <= hi ? x : seam(x, cs[i].width) ?? x;
   }
-  for (let i = a - 1; i >= 0; i--) {
+  for (let i = lo - 1; i >= 0; i--) {
     const x = out[i + 1] - cs[i].width, s = seam(x, cs[i].width);
     out[i] = s === undefined ? x : s - cs[i].width;
   }
