@@ -22,8 +22,9 @@ declare const workspace: {
   windowAdded: Signal<[Win]>; windowRemoved: Signal<[Win]>; windowActivated: Signal<[Win]>;
   screensChanged: Signal; virtualScreenGeometryChanged: Signal;
 };
-declare const KWin: { MaximizeArea: number };
+declare const KWin: { MaximizeArea: number; ElectricLeft: number; ElectricRight: number; ElectricTop: number; ElectricBottom: number };
 declare function registerShortcut(name: string, text: string, keys: string, f: () => void): void;
+declare function registerScreenEdge(edge: number, f: () => void): void;
 
 // One workspace per virtual desktop, keyed by desktop id.
 interface Space { desktop: Desktop; ws: model.Workspace<Win> }
@@ -103,13 +104,17 @@ function withActive(f: (s: Space, w: Win) => void) {
   if (w && s) f(s, w);
 }
 
+// Focus moves by Meta+arrow or by pushing the pointer into the matching
+// outer screen edge. KWin's Screen Edges settings set the edge delays.
 const keys = { left: "Left", right: "Right", up: "Up", down: "Down" } as const;
+const edges = { left: KWin.ElectricLeft, right: KWin.ElectricRight, up: KWin.ElectricTop, down: KWin.ElectricBottom };
 for (const dir of Object.keys(keys) as model.Dir[]) {
-  registerShortcut(`kolumn focus ${dir}`, `kolumn: Focus ${keys[dir]}`, `Meta+${keys[dir]}`, () =>
-    withActive((s, w) => {
-      const next = model.neighbor(s.ws, w, dir);
-      if (next) workspace.activeWindow = next;
-    }));
+  const focus = () => withActive((s, w) => {
+    const next = model.neighbor(s.ws, w, dir);
+    if (next) workspace.activeWindow = next;
+  });
+  registerShortcut(`kolumn focus ${dir}`, `kolumn: Focus ${keys[dir]}`, `Meta+${keys[dir]}`, focus);
+  registerScreenEdge(edges[dir], focus);
   registerShortcut(`kolumn move ${dir}`, `kolumn: Move ${keys[dir]}`, `Meta+Shift+${keys[dir]}`, () =>
     withActive((s, w) => { model.move(s.ws, w, dir); refresh(); }));
 }

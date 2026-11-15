@@ -94,6 +94,12 @@ The resize rule runs when a resize finishes. KWin chooses which edge to drag fro
 - If the top or bottom edge moved and there is a neighbor cell on that side, kolumn moves weight between the two cells so the shared edge ends up where you released it.
 - Anything else is discarded by `relayout()`.
 
+### Screen edges
+
+Pushing the pointer into the left, right, top, or bottom screen edge does the same thing as Meta+Left, Right, Up, or Down (`registerScreenEdge`, `kwin/src/scripting/scripting.cpp:397`). Up and down step through cells before they reach the next ribbon. KWin only creates edges on the outer borders of the monitor layout, so there is no edge on a seam between two monitors. The activation and reactivation delays come from System Settings > Screen Edges. A pointer resting at the edge does not trigger it again.
+
+kolumn does not keep any of a neighbor column visible at the screen edge. With focus follows mouse, a strip of the neighbor would end up under the pointer after every scroll, so each small pointer movement would focus the next column. Without the strip, a column scrolled in from the edge lines up with the edge, and the pointer sits on the window that just got focus.
+
 ## Keyboard
 
 | Shortcut | Action |
