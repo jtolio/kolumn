@@ -143,3 +143,20 @@ export function resizeCell<W>(column: Column<W>, k: number, dy: number, share: n
   cell.weight = Math.min(Math.max(share * total(column), 0.1 * pair), 0.9 * pair);
   other.weight = pair - cell.weight;
 }
+
+// Grows win's column width, or its cell's height, by delta pixels, but not
+// below min. height is the column's height in pixels. The cell's new height
+// comes from its weight alone, so the other cells keep their proportions to
+// each other, and it never takes more than 90% of the column.
+export function grow<W>(ws: Workspace<W>, win: W, axis: "width" | "height", delta: number, min: number, height: number) {
+  const p = find(ws, win);
+  if (!p) return;
+  if (axis === "width") {
+    p.column.width = Math.max(p.column.width + delta, min);
+    return;
+  }
+  const cell = p.column.cells[p.k], rest = total(p.column) - cell.weight;
+  if (!rest) return;
+  const share = Math.min(Math.max(cell.weight / total(p.column) + delta / height, min / height), 0.9);
+  cell.weight = (share * rest) / (1 - share);
+}

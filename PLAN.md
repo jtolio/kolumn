@@ -116,6 +116,8 @@ kolumn does not keep any of a neighbor column visible at the screen edge. With f
 | Meta+Shift+Up/Down | Swap with the neighbor cell. From the top or bottom cell, move into the ribbon above or below as a new column using the `windowAdded` rule. Create a new ribbon if there isn't one in that direction. |
 | Meta+Ctrl+arrows | Switch virtual desktop. This is KDE's default binding, and kolumn does not change it. |
 | Meta+Ctrl+Shift+arrows | Move the window to another virtual desktop. This is KDE's default, handled through `desktopsChanged`. |
+| No default key | Increase or decrease window width: change the focused column's width by 100px. It never goes below the window's minimum width. |
+| No default key | Increase or decrease window height: change the focused cell's height by 100px. Only that cell's weight changes, so the other cells in the column keep their proportions to each other. The cell stays at or above the window's minimum height and at or below 90% of the column. In a one-cell column, nothing happens. |
 
 ### Why these keys
 

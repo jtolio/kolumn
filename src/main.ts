@@ -12,7 +12,7 @@ interface Desktop { id: string }
 interface Win {
   managed: boolean; normalWindow: boolean; dialog: boolean; popupWindow: boolean;
   minimized: boolean; fullScreen: boolean; maximizeMode: number; move: boolean;
-  frameGeometry: Rect; desktops: Desktop[];
+  frameGeometry: Rect; minSize: { width: number; height: number }; desktops: Desktop[];
   minimizedChanged: Signal; desktopsChanged: Signal;
   interactiveMoveResizeStarted: Signal; interactiveMoveResizeFinished: Signal;
 }
@@ -83,10 +83,13 @@ function resized(s: Space, w: Win, start: Rect) {
   if (!p) return;
   if (g.width !== start.width) p.column.width = g.width + GAP;
   const dy = g.y !== start.y ? -1 : g.y + g.height !== start.y + start.height ? 1 : 0;
-  if (!dy) return;
+  if (dy) model.resizeCell(p.column, p.k, dy, (g.height + GAP) / columnHeight(s, p.column));
+}
+
+// The column's height in pixels, from its cells' rectangles.
+function columnHeight(s: Space, column: model.Column<Win>) {
   const rects = layout(s.ws, rowsOf(s.desktop));
-  const height = p.column.cells.reduce((h, c) => h + rects.get(c.win)!.height, 0);
-  model.resizeCell(p.column, p.k, dy, (g.height + GAP) / height);
+  return column.cells.reduce((h, c) => h + rects.get(c.win)!.height, 0);
 }
 
 // KWin's own windows, such as decoration button tooltips, report type
@@ -124,6 +127,21 @@ for (const dir of Object.keys(keys) as model.Dir[]) {
   registerScreenEdge(edges[dir], focus);
   registerShortcut(`kolumn move ${dir}`, `kolumn: Move ${keys[dir]}`, `Meta+Shift+${keys[dir]}`, () =>
     withActive((s, w) => { model.move(s.ws, w, dir); refresh(); }));
+}
+
+// Resizing steps by STEP pixels and has no default keys. Assign them in
+// System Settings.
+const STEP = 100;
+for (const axis of ["width", "height"] as const) {
+  for (const [verb, delta] of [["Increase", STEP], ["Decrease", -STEP]] as const) {
+    registerShortcut(`kolumn ${verb.toLowerCase()} ${axis}`, `kolumn: ${verb} Window ${axis[0].toUpperCase() + axis.slice(1)}`, "", () =>
+      withActive((s, w) => {
+        const p = model.find(s.ws, w);
+        if (!p) return;
+        model.grow(s.ws, w, axis, delta, w.minSize[axis] + GAP, columnHeight(s, p.column));
+        refresh();
+      }));
+  }
 }
 
 workspace.windowAdded.connect(w => { track(w); refresh(); });
