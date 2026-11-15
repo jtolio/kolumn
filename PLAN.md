@@ -14,7 +14,7 @@ kolumn is a KWin script for Plasma 6.6, the version Kubuntu 26.04 ships. It arra
 - A cell holds one window and has a weight. A cell's share of the column height is its weight divided by the sum of the weights in the column.
 - A column is a vertical stack of one or more cells. It has a width in pixels.
 - A ribbon is a horizontal row of zero or more columns. It has a horizontal scroll offset in pixels and a weight. A new ribbon gets the mean weight of the existing ribbons.
-- A workspace is a vertical stack of ribbons. It also stores the index of the top visible ribbon and how many ribbons each monitor row shows at once, which is at least 1 and starts at 1. There is one workspace per KDE virtual desktop.
+- A workspace is a vertical stack of ribbons. It also stores the index of the top visible ribbon and how many ribbons each monitor row shows at once, which is at least 1 and starts at 2. There is one workspace per KDE virtual desktop.
 
 kolumn deletes a column when its last cell leaves, and deletes a ribbon when its last column leaves.
 

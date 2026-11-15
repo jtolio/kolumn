@@ -24,7 +24,7 @@ export const total = (items: Weighted[]) => items.reduce((s, c) => s + c.weight,
 // A new cell or ribbon gets the mean weight, so the others keep their proportions.
 const mean = (items: Weighted[]) => total(items) / items.length || 1;
 
-export const workspace = <W>(): Workspace<W> => ({ ribbons: [], top: 0, focus: 0, shown: 1 });
+export const workspace = <W>(): Workspace<W> => ({ ribbons: [], top: 0, focus: 0, shown: 2 });
 const ribbon = <W>(ws: Workspace<W>): Ribbon<W> => ({ columns: [], scroll: 0, focus: 0, weight: mean(ws.ribbons) });
 const column = <W>(win: W, width: number): Column<W> => ({ cells: [{ win, weight: 1 }], width, focus: 0 });
 const focused = <W>(column?: Column<W>) => column?.cells[column.focus]?.win;

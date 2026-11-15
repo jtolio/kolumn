@@ -173,3 +173,7 @@ test("a new ribbon gets the mean ribbon weight", () => {
   m.move(ws, "b", "down");
   assert.deepEqual(ws.ribbons.map(r => r.weight), [3, 3]);
 });
+
+test("a workspace shows two ribbons per row by default", () => {
+  assert.equal(m.workspace().shown, 2);
+});
