@@ -99,10 +99,10 @@ test("focusing a column that is cut off steps the anchor toward it until it show
   const rs = rows([rect(0, 0, 1920, 1080)]);
   m.setFocus(ws, "w3");
   scroll(ws, rs);
-  assert.equal(ws.ribbons[0].anchor, 2);
+  assert.equal(ws.ribbons[0].anchor, 1);
   m.setFocus(ws, "w0");
   scroll(ws, rs);
-  assert.equal(ws.ribbons[0].anchor, 1);
+  assert.equal(ws.ribbons[0].anchor, 0);
 });
 
 test("removing columns keeps the anchor on an existing column", () => {
@@ -254,4 +254,21 @@ test("with the main monitor on the right, hovering any window moves nothing", ()
     assert.deepEqual(layout(ws, rs), before, `hovering ${w} moved windows`);
   }
   assert.deepEqual(["a0", "a1", "a2"].map(w => layout(ws, rs).get(w)!.x), [920, 2369, 3369]);
+});
+
+test("showing a cut-off column moves only as many columns as needed off its monitor", () => {
+  // The secondary on the left holds w0 to w4, with w0 hanging off its left
+  // edge. Showing w0 should move only w4 onto the main monitor.
+  const rs = rows([rect(1920, 0, 2400, 1200), rect(0, 0, 1920, 1080)]);
+  const ws = m.workspace<string>();
+  ws.shown = 1;
+  const widths = [367, 462, 309, 404, 617, 710, 348, 744];
+  widths.forEach((width, i) => { m.add(ws, `w${i}`, width); m.setFocus(ws, `w${i}`); scroll(ws, rs); });
+  const onSecondary = () => widths.map((_, i) => layout(ws, rs).get(`w${i}`)!).map(g => g.x + g.width <= 1920);
+  assert.deepEqual(onSecondary(), [true, true, true, true, true, false, false, false]);
+  assert.ok(layout(ws, rs).get("w0")!.x < 0);
+  m.setFocus(ws, "w0");
+  scroll(ws, rs);
+  assert.deepEqual(onSecondary(), [true, true, true, true, false, false, false, false]);
+  assert.ok(layout(ws, rs).get("w0")!.x >= 0);
 });
