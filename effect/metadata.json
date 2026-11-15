@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Category": "Window Management",
+        "Description": "Zoom out to see every kolumn window on the desktop",
+        "EnabledByDefault": false,
+        "Id": "kolumnzoom",
+        "License": "MIT",
+        "Name": "kolumn zoom"
+    },
+    "X-Plasma-API": "declarativescript"
+}

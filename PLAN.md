@@ -94,6 +94,12 @@ The resize rule runs when a resize finishes. KWin chooses which edge to drag fro
 - If the top or bottom edge moved and there is a neighbor cell on that side, kolumn moves weight between the two cells so the shared edge ends up where you released it.
 - Anything else is discarded by `relayout()`.
 
+### Zoom out
+
+Meta+Z opens a separate desktop effect, `kolumnzoom`. It shows a thumbnail of every tiled window on the current desktop at its real position, scaled so the whole layout, including off-screen columns and ribbons, fits on each screen. Clicking a thumbnail makes that window active and closes the effect, and kolumn then scrolls to it as it does for any focus change. Escape, or a click outside the thumbnails, closes the effect.
+
+The effect does not read kolumn's state. kolumn keeps every window at its real position, so the window positions alone are the layout. KWin's Overview can't do this, because it rearranges windows into a grid that breaks up columns with more than one cell.
+
 ### Screen edges
 
 Pushing the pointer into the left, right, top, or bottom screen edge does the same thing as Meta+Left, Right, Up, or Down (`registerScreenEdge`, `kwin/src/scripting/scripting.cpp:397`). Up and down step through cells before they reach the next ribbon. KWin only creates edges on the outer borders of the monitor layout, so there is no edge on a seam between two monitors. The activation and reactivation delays come from System Settings > Screen Edges. A pointer resting at the edge does not trigger it again.
@@ -153,6 +159,8 @@ src/model.ts      nouns and pure operations (insert, remove, move, swap, drop, r
 src/geometry.ts   pure functions: monitor rows, rectangles for every cell, minimal scroll
 src/main.ts       KWin adapter: signal wiring, shortcuts, writing frameGeometry
 test/*.test.ts    node:test against model.ts and geometry.ts
+effect/metadata.json         KPackageStructure "KWin/Effect", X-Plasma-API "declarativescript"
+effect/contents/ui/main.qml  the zoom-out effect
 ```
 
 `model.ts` and `geometry.ts` do not touch KWin, so tests can run them in plain Node with plain objects. `main.ts` is the only file that uses KWin's API, and it holds no layout logic.
