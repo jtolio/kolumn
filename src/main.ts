@@ -32,6 +32,11 @@ const spaces = new Map<string, Space>();
 const home = new Map<Win, Space>();
 
 const copy = (r: Rect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.height });
+
+// Space between neighboring windows. Each window is inset from its cell by
+// half of it on every side, so a cell is GAP larger than its window.
+const GAP = 2;
+const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r.width - GAP, height: r.height - GAP });
 const rowsOf = (desktop: Desktop) => rows(workspace.screens.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
 
 // A window on all desktops has no desktops listed and joins the current one.
@@ -40,7 +45,7 @@ function add(w: Win) {
   const desktop = w.desktops[0] ?? workspace.currentDesktop;
   let s = spaces.get(desktop.id);
   if (!s) spaces.set(desktop.id, (s = { desktop, ws: model.workspace() }));
-  model.add(s.ws, w, w.frameGeometry.width);
+  model.add(s.ws, w, w.frameGeometry.width + GAP);
   home.set(w, s);
 }
 
@@ -60,7 +65,7 @@ function refresh() {
   }
   for (const { desktop, ws } of spaces.values()) {
     for (const [w, r] of layout(ws, rowsOf(desktop))) {
-      if (!w.fullScreen && !w.maximizeMode) w.frameGeometry = r;
+      if (!w.fullScreen && !w.maximizeMode) w.frameGeometry = inset(r);
     }
   }
 }
@@ -76,12 +81,12 @@ function dropped(s: Space, w: Win) {
 function resized(s: Space, w: Win, start: Rect) {
   const p = model.find(s.ws, w), g = w.frameGeometry;
   if (!p) return;
-  if (g.width !== start.width) p.column.width = g.width;
+  if (g.width !== start.width) p.column.width = g.width + GAP;
   const dy = g.y !== start.y ? -1 : g.y + g.height !== start.y + start.height ? 1 : 0;
   if (!dy) return;
   const rects = layout(s.ws, rowsOf(s.desktop));
   const height = p.column.cells.reduce((h, c) => h + rects.get(c.win)!.height, 0);
-  model.resizeCell(p.column, p.k, dy, g.height / height);
+  model.resizeCell(p.column, p.k, dy, (g.height + GAP) / height);
 }
 
 function track(w: Win) {

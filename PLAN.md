@@ -35,7 +35,7 @@ kolumn places every window directly in KDE's global coordinate space. KWin then 
 
 1. Rows. kolumn groups monitors whose usable vertical ranges overlap into one row. It uses `workspace.clientArea(MaximizeArea, output, desktop)` for each monitor's usable area, which already leaves out Plasma panels. Rows are sorted top to bottom. With a single monitor there is one row.
 2. Which ribbon each row shows. Row `k` shows ribbon `top + k`. kolumn stacks ribbons above `top` upward past the top edge of row 0. It stacks ribbons past the last row downward past that row's bottom edge. Ribbons outside the rows end up off-screen.
-3. Horizontal placement. A ribbon's columns are packed edge to edge with no gaps. They start at the left edge of the row, minus the ribbon's scroll offset. A column may cross a monitor seam.
+3. Horizontal placement. A ribbon's columns are packed edge to edge. They start at the left edge of the row, minus the ribbon's scroll offset. A column may cross a monitor seam. When `main.ts` writes a window's geometry, it insets the window 1px from its cell on every side, which leaves a 2px gap between neighboring windows. A column's width includes that gap, so a new column is 2px wider than the window's own width.
 4. Column height. A column's vertical extent is the overlap of the usable vertical ranges of the monitors it covers horizontally in its row. A column on one monitor gets that monitor's height. A column across a seam gets the smaller of the two heights. An off-screen column uses the nearest monitor in its row.
 5. Cell height. Each cell gets `weight / sum(weights)` of the column height. The weights are never normalized. Removing a cell leaves the other weights unchanged, so in a column with weights `a, b, c`, removing `a` gives `b` a share of `b/(b+c)`. A new cell gets the mean of the column's existing weights, so it takes `1/(n+1)` of the height and the existing cells keep their proportions to each other.
 6. Scrolling. When the focused window changes, kolumn scrolls as little as possible:
@@ -199,6 +199,6 @@ The code budget is about 400 lines of application code across the three `src` fi
 
 ## Left out on purpose
 
-These are left out because they add concepts or code without being required: floating windows, exemption lists, gaps, drop-preview outlines, live rearranging during a drag, animations, width presets, Meta+wheel scrolling, saving and restoring layouts, Activities support, a config UI, and dropping onto empty space.
+These are left out because they add concepts or code without being required: floating windows, exemption lists, configurable gaps, drop-preview outlines, live rearranging during a drag, animations, width presets, Meta+wheel scrolling, saving and restoring layouts, Activities support, a config UI, and dropping onto empty space.
 
 KWin's Geometry Change desktop effect, which is part of kdeplasma-addons, can animate kolumn's moves with no code in kolumn. You can turn it on in System Settings if you want animations.
