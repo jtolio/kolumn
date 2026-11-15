@@ -10,7 +10,7 @@ import { hit, layout, place, ribbonAt, rows, scroll, type Rect } from "./geometr
 interface Signal<A extends unknown[] = []> { connect(f: (...args: A) => void): void }
 interface Desktop { id: string }
 interface Win {
-  managed: boolean; normalWindow: boolean; dialog: boolean; popupWindow: boolean; opacity: number;
+  managed: boolean; normalWindow: boolean; dialog: boolean; popupWindow: boolean; opacity: number; moveableAcrossScreens: boolean;
   minimized: boolean; fullScreen: boolean; maximizeMode: number; move: boolean;
   frameGeometry: Rect; minSize: { width: number; height: number }; desktops: Desktop[];
   minimizedChanged: Signal; desktopsChanged: Signal;
@@ -108,9 +108,11 @@ function vertical(s: Space, p: model.Pos<Win>, cells: boolean): [model.Weighted[
 
 // KWin's own windows, such as decoration button tooltips, report type
 // Normal, but their Qt popup flag marks them as popups. Fully transparent
-// windows, such as the Xwayland Video Bridge's, are never seen.
+// windows, such as the Xwayland Video Bridge's, are never seen. Layer-shell
+// windows, such as the lock and logout screens, can report type Normal
+// too, but KWin never moves them.
 function track(w: Win) {
-  if (!(w.managed && (w.normalWindow || w.dialog) && !w.popupWindow && w.opacity > 0)) return;
+  if (!(w.managed && (w.normalWindow || w.dialog) && !w.popupWindow && w.opacity > 0 && w.moveableAcrossScreens)) return;
   let start: Rect, moving: boolean;
   const rehome = () => { remove(w); add(w); refresh(); };
   w.minimizedChanged.connect(rehome);
