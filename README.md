@@ -22,6 +22,14 @@ You need Node.js and npm to build it.
 
 To see script errors and `console.warn()` output, run `journalctl --user -f | grep -i kolumn`.
 
+If another action already has one of kolumn's keys when kolumn first starts, that kolumn shortcut is saved with no key. Clearing the other binding later does not move the key over. Look for these in `~/.config/kglobalshortcutsrc`:
+
+```
+grep -E 'Meta\+(Shift\+)?(Left|Right|Up|Down)|^kolumn' ~/.config/kglobalshortcutsrc
+```
+
+Each line reads `name=active keys,default keys,label`, and `\t` separates two active keys. An empty active field on a `kolumn` line means the shortcut has no key. Any other action listing a Meta+arrow key owns it. For example, `Switch Window Left=Meta+Alt+Left\tMeta+Left` gives Meta+Left to KWin's directional focus. Remove those keys, then assign them to the `kolumn:` shortcuts in System Settings > Keyboard > Shortcuts > KWin.
+
 ## Upgrades
 
 ```
