@@ -6,8 +6,9 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "lib": ["es2020"],
-    "types": ["node"]
+    // KWin's JavaScript engine lacks newer built-ins such as Array.prototype.flatMap.
+    "lib": ["es2018"],
+    "types": []
   },
-  "include": ["src", "test"]
+  "include": ["src"]
 }

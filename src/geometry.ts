@@ -65,7 +65,7 @@ function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
     out.push(x);
     x += c.width;
   }
-  const seams = row.monitors.flatMap(m => [m.x, m.x + m.width]).filter(s => s > row.left && s < row.right);
+  const seams = [...row.monitors.map(m => m.x), ...row.monitors.map(m => m.x + m.width)].filter(s => s > row.left && s < row.right);
   const seam = (x: number, w: number) => seams.find(s => x < s && s < x + w);
   const p = clamp(ribbon.focus, cs.length), w = cs[p]?.width, s = cs.length ? seam(out[p], w) : undefined;
   if (s !== undefined) {

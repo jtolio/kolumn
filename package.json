@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && esbuild src/main.ts --bundle --format=iife --target=es2020 --outfile=package/contents/code/main.js",
+    "build": "tsc && tsc -p test && esbuild src/main.ts --bundle --format=iife --target=es2020 --outfile=package/contents/code/main.js",
     "test": "node --test test/*.test.ts",
     "reload": "./reload.sh"
   },
