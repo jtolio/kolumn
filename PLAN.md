@@ -183,7 +183,7 @@ The code budget is about 400 lines of application code across the three `src` fi
 5. Install it and try it on the real desktop:
    ```
    kwriteconfig6 --file kwinrc --group Plugins --key kolumnEnabled true
-   npm run reload      # build, install or upgrade, then unload and start kolumn
+   npm run reload      # build, install or upgrade, then restart the script and effect
    journalctl --user -f | grep -i kolumn           # script errors and console.warn() output
    ```
    `qdbus6 org.kde.KWin /KWin reconfigure` does not pick up a new build. KWin only loads scripts that are not already loaded (`kwin/src/scripting/scripting.cpp:774-790`), so `reload` unloads kolumn first.

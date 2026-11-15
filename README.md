@@ -14,11 +14,13 @@ You need Node.js and npm to build it.
    - Quick Tile Window to the Left, Right, Top, and Bottom
    - Window to Previous Screen
    - Window to Next Screen
-3. Enable the script, then build, install, and start it:
+3. Enable the script and the zoom-out effect, then build, install, and start them:
    ```
    kwriteconfig6 --file kwinrc --group Plugins --key kolumnEnabled true
+   kwriteconfig6 --file kwinrc --group Plugins --key kolumnzoomEnabled true
    npm run reload
    ```
+   The zoom-out effect opens with Meta+Z.
 
 To see script errors and `console.warn()` output, run `journalctl --user -f | grep -i kolumn`.
 
@@ -38,4 +40,4 @@ npm install
 npm run reload
 ```
 
-`npm run reload` unloads the running script and starts it again. Running `qdbus6 org.kde.KWin /KWin reconfigure` is not enough: KWin does not reload a script that is already running, so the old code keeps running. Reloading rebuilds the layout from scratch, so every window starts out in its own column.
+`npm run reload` unloads the running script and effect and starts them again. Running `qdbus6 org.kde.KWin /KWin reconfigure` is not enough: KWin does not reload a script that is already running, so the old code keeps running. Reloading rebuilds the layout from scratch, so every window starts out in its own column.
