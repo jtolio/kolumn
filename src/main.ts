@@ -35,7 +35,7 @@ const copy = (r: Rect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.hei
 
 // Space between neighboring windows. Each window is inset from its cell by
 // half of it on every side, so a cell is GAP larger than its window.
-const GAP = 2;
+const GAP = 6;
 const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r.width - GAP, height: r.height - GAP });
 const rowsOf = (desktop: Desktop) => rows(workspace.screens.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
 
