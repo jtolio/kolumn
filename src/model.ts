@@ -97,13 +97,16 @@ export function move<W>(ws: Workspace<W>, win: W, dir: Dir) {
     const [cell] = cells.splice(p.k, 1);
     p.ribbon.columns.splice(p.c + (dx > 0 ? 1 : 0), 0, { cells: [cell], width: p.column.width, focus: 0 });
   } else if (dx) {
-    // A lone window joins the neighbor column at the cell level with its
-    // own center, which is the middle of the column.
+    // A lone window joins the neighbor column at the gap between cells
+    // nearest its own center, which is the middle of the column. Ties go
+    // down, so a window joining a single cell goes below it.
     const target = p.ribbon.columns[p.c + dx];
     if (!target) return;
     cells.splice(p.k, 1);
     let acc = 0;
-    insertCell(target, target.cells.findIndex(c => (acc += c.weight) / total(target) > 0.5), win);
+    const gaps = [0, ...target.cells.map(c => (acc += c.weight) / total(target))];
+    const off = (i: number) => Math.abs(gaps[i] - 0.5);
+    insertCell(target, gaps.reduce((best, _, i) => (off(i) <= off(best) + 1e-9 ? i : best), 0), win);
   } else if (cells[p.k + dy]) {
     [cells[p.k], cells[p.k + dy]] = [cells[p.k + dy], cells[p.k]];
   } else {

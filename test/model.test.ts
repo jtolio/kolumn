@@ -73,14 +73,29 @@ test("moving sideways out of a shared column makes a new column on that side", (
   assert.deepEqual(shape(ws), [[["b"], ["a"]]]);
 });
 
-test("moving a lone window sideways joins the neighbor column at the middle", () => {
-  const ws = build("a", "b", "c");
-  m.drop(ws, "b", "a", "down");
-  m.move(ws, "c", "left");
-  assert.deepEqual(shape(ws), [[["a", "c", "b"]]]);
-  m.move(ws, "c", "left");
-  m.move(ws, "c", "left");
-  assert.deepEqual(shape(ws), [[["c"], ["a", "b"]]]);
+test("moving a lone window sideways into one cell goes below it", () => {
+  const ws = build("a", "b");
+  m.move(ws, "b", "left");
+  assert.deepEqual(shape(ws), [[["a", "b"]]]);
+});
+
+test("moving a lone window sideways takes the gap nearest the middle, ties going down", () => {
+  const join = (...weights: number[]) => {
+    const ws = build("x", ...weights.map((_, i) => `c${i}`));
+    weights.forEach((w, i) => {
+      if (i > 0) m.drop(ws, `c${i}`, `c${i - 1}`, "down");
+      ws.ribbons[0].columns[1].cells[i].weight = w;
+    });
+    m.move(ws, "x", "right");
+    return shape(ws)[0][0];
+  };
+  assert.deepEqual(join(1), ["c0", "x"]);
+  assert.deepEqual(join(1, 1), ["c0", "x", "c1"]);
+  assert.deepEqual(join(1, 1, 1), ["c0", "c1", "x", "c2"]);
+  assert.deepEqual(join(1, 2), ["c0", "x", "c1"]);
+  assert.deepEqual(join(2, 1), ["c0", "x", "c1"]);
+  assert.deepEqual(join(1, 3), ["c0", "x", "c1"]);
+  assert.deepEqual(join(3, 1), ["c0", "x", "c1"]);
 });
 
 test("moving a lone window sideways at the end of a ribbon does nothing", () => {
