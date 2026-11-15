@@ -85,14 +85,18 @@ export function remove<W>(ws: Workspace<W>, win: W) {
   prune(ws);
 }
 
-// The window that focus moves to. Up and down fall through to the next ribbon.
-export function neighbor<W>(ws: Workspace<W>, win: W, dir: Dir): W | undefined {
+// The window that focus moves to. Up and down fall through to the column of
+// the next ribbon with the least distance(column), entering it at the cell
+// on the side focus comes from.
+export function neighbor<W>(ws: Workspace<W>, win: W, dir: Dir, distance: (column: Column<W>) => number): W | undefined {
   const p = find(ws, win);
   if (!p) return;
   const [dx, dy] = delta[dir];
   if (dx) return focused(p.ribbon.columns[p.c + dx]);
-  const next = ws.ribbons[p.r + dy];
-  return p.column.cells[p.k + dy]?.win ?? focused(next?.columns[next.focus]);
+  const own = p.column.cells[p.k + dy]?.win, next = ws.ribbons[p.r + dy];
+  if (own || !next) return own;
+  const column = next.columns.reduce((a, b) => (distance(b) < distance(a) ? b : a));
+  return column.cells[dy > 0 ? 0 : column.cells.length - 1].win;
 }
 
 export function move<W>(ws: Workspace<W>, win: W, dir: Dir) {

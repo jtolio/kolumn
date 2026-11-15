@@ -49,21 +49,33 @@ test("removing the last window of a column or ribbon removes it", () => {
   assert.deepEqual(shape(ws), [[["a"]]]);
 });
 
+const anywhere = () => 0;
+
 test("focus moves between columns and stops at the ends", () => {
   const ws = build("a", "b");
-  assert.equal(m.neighbor(ws, "a", "right"), "b");
-  assert.equal(m.neighbor(ws, "b", "right"), undefined);
-  assert.equal(m.neighbor(ws, "a", "left"), undefined);
+  assert.equal(m.neighbor(ws, "a", "right", anywhere), "b");
+  assert.equal(m.neighbor(ws, "b", "right", anywhere), undefined);
+  assert.equal(m.neighbor(ws, "a", "left", anywhere), undefined);
 });
 
-test("focus up and down falls through to the next ribbon's focused window", () => {
+test("focus up and down falls through to the next ribbon, entering at the near cell", () => {
   const ws = build("a", "b", "c");
   m.drop(ws, "b", "a", "down");
   m.move(ws, "c", "down");
   assert.deepEqual(shape(ws), [[["a", "b"]], [["c"]]]);
-  assert.equal(m.neighbor(ws, "a", "down"), "b");
-  assert.equal(m.neighbor(ws, "b", "down"), "c");
-  assert.equal(m.neighbor(ws, "c", "up"), "a");
+  assert.equal(m.neighbor(ws, "a", "down", anywhere), "b");
+  assert.equal(m.neighbor(ws, "b", "down", anywhere), "c");
+  assert.equal(m.neighbor(ws, "c", "up", anywhere), "b");
+  assert.equal(m.neighbor(ws, "c", "down", anywhere), undefined);
+});
+
+test("moving between ribbons picks the column with the least distance", () => {
+  const ws = build("a", "b", "c", "d");
+  m.move(ws, "d", "down");
+  m.setFocus(ws, "a");
+  // Ribbon 0 has columns a, b, c. Pretend b is nearest, though a was focused last.
+  const at = { a: 0, b: 1000, c: 2000 } as Record<string, number>;
+  assert.equal(m.neighbor(ws, "d", "up", col => Math.abs(at[col.cells[0].win] - 900)), "b");
 });
 
 test("moving sideways out of a shared column makes a new column on that side", () => {

@@ -130,7 +130,10 @@ const keys = { left: "Left", right: "Right", up: "Up", down: "Down" } as const;
 const edges = { left: KWin.ElectricLeft, right: KWin.ElectricRight, up: KWin.ElectricTop, down: KWin.ElectricBottom };
 for (const dir of Object.keys(keys) as model.Dir[]) {
   const focus = () => withActive((s, w) => {
-    const next = model.neighbor(s.ws, w, dir);
+    // Moving between ribbons picks the column whose center is nearest
+    // this window's center.
+    const rects = layout(s.ws, rowsOf(s.desktop)), center = (r: Rect) => r.x + r.width / 2, here = center(rects.get(w)!);
+    const next = model.neighbor(s.ws, w, dir, c => Math.abs(center(rects.get(c.cells[0].win)!) - here));
     if (next) workspace.activeWindow = next;
   });
   registerShortcut(`kolumn focus ${dir}`, `kolumn: Focus ${keys[dir]}`, `Meta+${keys[dir]}`, focus);

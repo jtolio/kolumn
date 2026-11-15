@@ -113,7 +113,7 @@ kolumn does not keep any of a neighbor column visible at the screen edge. With f
 | Shortcut | Action |
 |---|---|
 | Meta+Left/Right | Focus the neighbor column. Stops at the ends of the ribbon. |
-| Meta+Up/Down | Focus the neighbor cell. From the top or bottom cell, focus the ribbon above or below. |
+| Meta+Up/Down | Focus the neighbor cell. From the top or bottom cell, focus the ribbon above or below, in the column whose center is horizontally nearest the current window's center. Focus enters that column at its top cell when moving down and its bottom cell when moving up. |
 | Meta+Shift+Left/Right | If the column has other cells, take the window out into its own column on that side. If the window is alone in its column, move it into the neighbor column at the gap between cells nearest the column's middle, counting the top and bottom edges as gaps. Ties go down, so joining a single cell puts the window below it. At the end of the ribbon, do nothing. |
 | Meta+Shift+Up/Down | Swap with the neighbor cell. From the top or bottom cell, move into the ribbon above or below as a new column using the `windowAdded` rule. Create a new ribbon if there isn't one in that direction. |
 | Meta+Ctrl+arrows | Switch virtual desktop. This is KDE's default binding, and kolumn does not change it. |
