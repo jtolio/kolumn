@@ -220,3 +220,14 @@ test("focus up and down skips empty ribbons", () => {
   m.show(ws, 2);
   assert.deepEqual(shape(ws), [[["a"]], [["b"]]]);
 });
+
+test("moveTo puts a window into another ribbon as a new column", () => {
+  const ws = m.workspace<string>();
+  m.add(ws, "a", 100);
+  m.setFocus(ws, "a");
+  m.add(ws, "b", 300);
+  assert.deepEqual(shape(ws), [[["a"], ["b"]], []]);
+  m.moveTo(ws, "b", 1);
+  assert.deepEqual(shape(ws), [[["a"]], [["b"]]]);
+  assert.equal(ws.ribbons[1].columns[0].width, 300);
+});

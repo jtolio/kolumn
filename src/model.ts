@@ -85,6 +85,15 @@ export function add<W>(ws: Workspace<W>, win: W, width: number) {
   insertRight(ws.ribbons[ws.focus], win, width);
 }
 
+// Moves win into ribbon r as a new column right of that ribbon's focused
+// column, keeping its column's width.
+export function moveTo<W>(ws: Workspace<W>, win: W, r: number) {
+  const target = ws.ribbons[r], p = target && detach(ws, win);
+  if (!p) return;
+  insertRight(target, win, p.column.width);
+  prune(ws);
+}
+
 // Sets how many ribbons each monitor row shows, at least 1.
 export function show<W>(ws: Workspace<W>, shown: number) {
   ws.shown = Math.max(1, shown);

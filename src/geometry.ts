@@ -82,6 +82,22 @@ export function place<W>(ws: Workspace<W>, rs: Row[], r: number): { k: number; g
   return { k, group: ws.ribbons.slice(first, first + ws.shown) };
 }
 
+// The fractions of its row's height, from the top, that a ribbon's band
+// covers among the ribbons it shares the row with.
+function band<W>(group: Ribbon<W>[], ribbon: Ribbon<W>): [number, number] {
+  const f0 = total(group.slice(0, group.indexOf(ribbon))) / total(group);
+  return [f0, f0 + ribbon.weight / total(group)];
+}
+
+// The shown ribbon whose band on the monitor under p contains p, if any.
+export function ribbonAt<W>(ws: Workspace<W>, rs: Row[], p: { x: number; y: number }): number | undefined {
+  for (let r = 0; r < ws.ribbons.length; r++) {
+    const { k, group } = place(ws, rs, r), [f0, f1] = band(group, ws.ribbons[r]);
+    const m = rs[k]?.monitors.find(m => p.x >= m.x && p.x < m.x + m.width);
+    if (m && p.y >= m.y + m.height * f0 && p.y < m.y + m.height * f1) return r;
+  }
+}
+
 // Each ribbon takes its weighted band of its row's height.
 export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   const out = new Map<W, Rect>();
@@ -89,10 +105,9 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   ws.ribbons.forEach((ribbon, r) => {
     const { k, group } = place(ws, rs, r), row = rs[clamp(k, rs.length)];
     const dy = (k - clamp(k, rs.length)) * (row.bottom - row.top);
-    const f0 = total(group.slice(0, group.indexOf(ribbon))) / total(group), f = ribbon.weight / total(group);
-    const x = xs(ribbon, row);
+    const [f0, f1] = band(group, ribbon), x = xs(ribbon, row);
     ribbon.columns.forEach((column, c) => {
-      const [top, bottom] = span(row, x[c], column.width, f0, f0 + f);
+      const [top, bottom] = span(row, x[c], column.width, f0, f1);
       const at = (acc: number) => Math.round(top + ((bottom - top) * acc) / total(column.cells));
       let acc = 0;
       for (const cell of column.cells) {

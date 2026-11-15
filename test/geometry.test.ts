@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as m from "../src/model.ts";
-import { hit, layout, rows, scroll, type Rect } from "../src/geometry.ts";
+import { hit, layout, ribbonAt, rows, scroll, type Rect } from "../src/geometry.ts";
 
 const rect = (x: number, y: number, width: number, height: number): Rect => ({ x, y, width, height });
 
@@ -271,4 +271,13 @@ test("showing a cut-off column moves only as many columns as needed off its moni
   scroll(ws, rs);
   assert.deepEqual(onSecondary(), [true, true, true, true, false, false, false, false]);
   assert.ok(layout(ws, rs).get("w0")!.x >= 0);
+});
+
+test("ribbonAt finds the shown ribbon whose band holds the point, empty ones too", () => {
+  const ws = build(800);
+  m.show(ws, 2);
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  assert.equal(ribbonAt(ws, rs, { x: 100, y: 100 }), 0);
+  assert.equal(ribbonAt(ws, rs, { x: 100, y: 900 }), 1);
+  assert.equal(ribbonAt(ws, rs, { x: 5000, y: 900 }), undefined);
 });

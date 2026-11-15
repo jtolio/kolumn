@@ -3,7 +3,7 @@
 // model.ts and geometry.ts.
 
 import * as model from "./model.ts";
-import { hit, layout, place, rows, scroll, type Rect } from "./geometry.ts";
+import { hit, layout, place, ribbonAt, rows, scroll, type Rect } from "./geometry.ts";
 
 // The parts of KWin's scripting API used here. See kwin/src/window.h and
 // kwin/src/scripting/workspace_wrapper.h.
@@ -71,9 +71,13 @@ function refresh() {
   }
 }
 
+// With no window at the pointer's height, a drop into an empty ribbon moves
+// the window there.
 function dropped(s: Space, w: Win) {
-  const target = hit(layout(s.ws, rowsOf(s.desktop)), workspace.cursorPos, w);
-  if (target) model.drop(s.ws, w, ...target);
+  const rs = rowsOf(s.desktop), p = workspace.cursorPos, target = hit(layout(s.ws, rs), p, w);
+  if (target) return model.drop(s.ws, w, ...target);
+  const r = ribbonAt(s.ws, rs, p);
+  if (r !== undefined && !s.ws.ribbons[r].columns.length) model.moveTo(s.ws, w, r);
 }
 
 // KWin resizes from the edge nearest the grab point. A moved left or right

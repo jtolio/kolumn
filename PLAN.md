@@ -83,9 +83,10 @@ The drop rule runs when a move finishes:
    - Right quarter: insert it as a new column to the right.
    - Middle: swap the two windows.
 3. If the pointer is over empty space, such as beside a ribbon narrower than its row or in the gap between two windows, the target is the nearest window at the pointer's height. The window becomes a new column on that window's side facing the pointer.
-4. If the pointer is over the dragged window's own cell, or no window is at the pointer's height, the window snaps back to where it was, because the next `relayout()` puts it back.
+4. If no window is at the pointer's height and the pointer is over an empty shown ribbon, the window moves into that ribbon. `ribbonAt()` finds the ribbon from its band on the monitor under the pointer.
+5. Otherwise, for example over the dragged window's own cell, the window snaps back to where it was, because the next `relayout()` puts it back.
 
-Dragging never creates a ribbon. Only the keyboard does that.
+Dragging never creates a ribbon. Only the keyboard does that, but dragging can fill an empty one.
 
 ### Resize rule
 
