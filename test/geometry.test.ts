@@ -5,8 +5,10 @@ import { hit, layout, rows, scroll, type Rect } from "../src/geometry.ts";
 
 const rect = (x: number, y: number, width: number, height: number): Rect => ({ x, y, width, height });
 
+// One ribbon per row unless a test says otherwise.
 function build(...widths: number[]) {
   const ws = m.workspace<string>();
+  ws.shown = 1;
   widths.forEach((width, i) => {
     m.add(ws, `w${i}`, width);
     m.setFocus(ws, `w${i}`);
@@ -33,12 +35,25 @@ test("columns pack edge to edge and fill the monitor height", () => {
   assert.deepEqual(out.get("w2"), rect(1110, 30, 500, 1050));
 });
 
-test("a column across a seam takes the smaller monitor's height", () => {
+test("a column that would cross a seam moves past it, leaving a blank", () => {
   const ws = build(1500, 1000, 500);
+  m.setFocus(ws, "w0");
   const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
   assert.deepEqual(out.get("w0"), rect(0, 0, 1500, 1080));
-  assert.deepEqual(out.get("w1"), rect(1500, 0, 1000, 900));
-  assert.deepEqual(out.get("w2"), rect(2500, 0, 500, 900));
+  assert.deepEqual(out.get("w1"), rect(1920, 0, 1000, 900));
+  assert.deepEqual(out.get("w2"), rect(2920, 0, 500, 900));
+});
+
+test("a column that cannot avoid a seam takes the smaller monitor's height", () => {
+  const ws = build(3000);
+  const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
+  assert.deepEqual(out.get("w0"), rect(0, 0, 3000, 900));
+});
+
+test("blanks work outward from the main monitor's center, leftward too", () => {
+  const ws = build(800, 800, 800);
+  const out = layout(ws, rows([rect(1440, 0, 1920, 1080), rect(0, 0, 1440, 1080)]));
+  assert.deepEqual([0, 1, 2].map(i => out.get(`w${i}`)!.x), [640, 1760, 2560]);
 });
 
 test("an off-screen column uses the nearest monitor", () => {
@@ -105,7 +120,7 @@ test("a ribbon narrower than the row is centered on the main monitor", () => {
 test("a ribbon wider than the main monitor stays inside the row", () => {
   const ws = build(1500, 1500);
   const out = layout(ws, rows([rect(1920, 0, 2560, 1440), rect(0, 0, 1920, 1080)]));
-  assert.deepEqual(out.get("w0"), rect(1480, 0, 1500, 1080));
+  assert.deepEqual(out.get("w0"), rect(420, 0, 1500, 1080));
   assert.deepEqual(out.get("w1"), rect(2980, 0, 1500, 1440));
 });
 
@@ -200,17 +215,33 @@ test("scrolling keeps the focused ribbon shown without leaving empty slots", () 
 });
 
 test("ribbons sharing a row never overlap across a seam", () => {
-  // Ribbon 0 has one column on the taller monitor. Ribbon 1's second
-  // column crosses the seam directly below it.
-  const ws = build(1900, 1500);
+  // Ribbon 0 has one column on the taller monitor. Ribbon 1's only column
+  // is too wide to avoid the seam and crosses it directly below.
+  const ws = build(1900, 3000);
   m.move(ws, "w1", "down");
-  m.setFocus(ws, "w1");
-  m.add(ws, "w2", 1000);
   ws.shown = 2;
   const out = layout(ws, rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]));
-  const above = out.get("w0")!, below = out.get("w2")!;
+  const above = out.get("w0")!, below = out.get("w1")!;
   assert.ok(below.x < above.x + above.width, "the columns overlap horizontally");
   assert.equal(above.y + above.height, 540);
   assert.equal(below.y, 540);
   assert.equal(below.y + below.height, 900);
+});
+
+test("blanks never push the focused column off screen", () => {
+  const ws = build(1500, 1000, 1000, 600);
+  const rs = rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]);
+  scroll(ws, rs);
+  const r = layout(ws, rs).get("w3")!;
+  assert.ok(r.x >= 1920 && r.x + r.width <= 3360, `w3 at ${r.x}`);
+  assert.ok(layout(ws, rs).get("w2")!.x + 1000 <= 1920, "w2 moved fully onto the left monitor");
+});
+
+test("a focused column on a seam moves onto the monitor holding more of it", () => {
+  const ws = build(1700, 500);
+  ws.ribbons[0].scroll = 0;
+  const rs = rows([rect(0, 0, 1920, 1080), rect(1920, 0, 1440, 900)]);
+  assert.equal(layout(ws, rs).get("w1")!.x, 1920);
+  m.setFocus(ws, "w0");
+  assert.equal(layout(ws, rs).get("w0")!.x, 0);
 });

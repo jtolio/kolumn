@@ -51,6 +51,38 @@ function origin<W>(ribbon: Ribbon<W>, row: Row) {
   return Math.min(Math.max(m.x + (m.width - w) / 2, row.left), row.right - w);
 }
 
+// The x of each of the ribbon's columns. They pack edge to edge from
+// origin(). A focused column on a seam between two monitors moves onto the
+// one holding more of it, or onto the other one, if that keeps it inside the
+// row. Then, working outward both ways from the focused
+// column, a column that would cross a seam moves past it and leaves a
+// blank. Working from the focused column keeps it on screen. Columns may
+// still run past the row's outer edges.
+function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
+  const cs = ribbon.columns, out: number[] = [];
+  let x = origin(ribbon, row);
+  for (const c of cs) {
+    out.push(x);
+    x += c.width;
+  }
+  const seams = row.monitors.flatMap(m => [m.x, m.x + m.width]).filter(s => s > row.left && s < row.right);
+  const seam = (x: number, w: number) => seams.find(s => x < s && s < x + w);
+  const p = clamp(ribbon.focus, cs.length), w = cs[p]?.width, s = cs.length ? seam(out[p], w) : undefined;
+  if (s !== undefined) {
+    const sides = s - out[p] > out[p] + w - s ? [s - w, s] : [s, s - w];
+    out[p] = sides.find(x => x >= row.left && x + w <= row.right) ?? out[p];
+  }
+  for (let i = p + 1; i < cs.length; i++) {
+    const x = out[i - 1] + cs[i - 1].width;
+    out[i] = seam(x, cs[i].width) ?? x;
+  }
+  for (let i = p - 1; i >= 0; i--) {
+    const x = out[i + 1] - cs[i].width, s = seam(x, cs[i].width);
+    out[i] = s === undefined ? x : s - cs[i].width;
+  }
+  return out;
+}
+
 // Row k shows ws.shown ribbons starting at ribbon top + k * ws.shown, and
 // group is the ribbons that share ribbon r's row. A ribbon above or below
 // the rows gets a row index past the first or last row and a row to itself,
@@ -70,18 +102,17 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
     const { k, group } = place(ws, rs, r), row = rs[clamp(k, rs.length)];
     const dy = (k - clamp(k, rs.length)) * (row.bottom - row.top);
     const f0 = total(group.slice(0, group.indexOf(ribbon))) / total(group), f = ribbon.weight / total(group);
-    let x = origin(ribbon, row);
-    for (const column of ribbon.columns) {
-      const [top, bottom] = span(row, x, column.width, f0, f0 + f);
+    const x = xs(ribbon, row);
+    ribbon.columns.forEach((column, c) => {
+      const [top, bottom] = span(row, x[c], column.width, f0, f0 + f);
       const at = (acc: number) => Math.round(top + ((bottom - top) * acc) / total(column.cells));
       let acc = 0;
       for (const cell of column.cells) {
         const y = at(acc);
         acc += cell.weight;
-        out.set(cell.win, { x: Math.round(x), y: y + dy, width: column.width, height: at(acc) - y });
+        out.set(cell.win, { x: Math.round(x[c]), y: y + dy, width: column.width, height: at(acc) - y });
       }
-      x += column.width;
-    }
+    });
   });
   return out;
 }
