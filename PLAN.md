@@ -162,7 +162,7 @@ kolumn does not change other components' shortcuts on its own.
 package/metadata.json        KPackageStructure "KWin/Script", X-Plasma-API "javascript"
 package/contents/code/main.js   build output, not edited by hand
 package/contents/config/main.xml  the Gap and Ribbons settings, read with readConfig()
-package/contents/ui/config.ui    the settings page, shown by KWin's kcm_kwin4_genericscripted
+package/contents/ui/config.ui    the settings page, shown by KWin's kwin/effects/configs/kcm_kwin4_genericscripted
 src/model.ts      nouns and pure operations (insert, remove, move, swap, drop, resize weights)
 src/geometry.ts   pure functions: monitor rows, rectangles for every cell, minimal scroll
 src/main.ts       KWin adapter: signal wiring, shortcuts, writing frameGeometry
