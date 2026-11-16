@@ -295,6 +295,9 @@ test("ribbonAt finds the shown ribbon whose band holds the point, empty ones too
   assert.equal(ribbonAt(ws, rs, { x: 5000, y: 900 }), undefined);
 });
 
+// Where a new window opens while win has focus.
+const openingNear = (ws: m.Workspace<string>, rs: ReturnType<typeof rows>, win: string) => (m.setFocus(ws, win), opening(ws, rs));
+
 // Ribbons of the given column widths, named r<ribbon>c<column>.
 function stack(shown: number, ...ribbons: number[][]) {
   const ws = m.workspace<string>(shown);
@@ -309,35 +312,35 @@ function stack(shown: number, ...ribbons: number[][]) {
 test("a new window opens in the visible ribbon with the fewest columns, after the nearest one", () => {
   const ws = stack(2, [200, 400, 600], [400, 400]);
   const rs = rows([rect(0, 0, 1920, 1080)]);
-  assert.deepEqual(opening(ws, rs, "r0c1"), [1, 0]);
-  m.add(ws, "new", 300, opening(ws, rs, "r0c1"));
+  assert.deepEqual(openingNear(ws, rs, "r0c1"), [1, 0]);
+  m.add(ws, "new", 300, openingNear(ws, rs, "r0c1"));
   assert.deepEqual(ws.ribbons[1].columns.map(c => c.cells[0].win), ["r1c0", "new", "r1c1"]);
 });
 
 test("on a tie a new window stays in the active window's ribbon, right of it", () => {
   const ws = stack(2, [400, 400], [400, 400]);
-  assert.deepEqual(opening(ws, rows([rect(0, 0, 1920, 1080)]), "r1c0"), [1, 0]);
+  assert.deepEqual(openingNear(ws, rows([rect(0, 0, 1920, 1080)]), "r1c0"), [1, 0]);
 });
 
 test("a new window never opens in a ribbon that is off screen", () => {
   const ws = stack(1, [400, 400], [400]);
-  assert.deepEqual(opening(ws, rows([rect(0, 0, 1920, 1080)]), "r0c0"), [0, 0]);
+  assert.deepEqual(openingNear(ws, rows([rect(0, 0, 1920, 1080)]), "r0c0"), [0, 0]);
 });
 
 test("an empty visible ribbon gets a new window first", () => {
   const ws = stack(2, [400]);
   const rs = rows([rect(0, 0, 1920, 1080)]);
-  assert.deepEqual(opening(ws, rs, "r0c0"), [1, 0]);
-  m.add(ws, "new", 300, opening(ws, rs, "r0c0"));
+  assert.deepEqual(openingNear(ws, rs, "r0c0"), [1, 0]);
+  m.add(ws, "new", 300, openingNear(ws, rs, "r0c0"));
   assert.deepEqual(ws.ribbons.map(r => r.columns.map(c => c.cells[0].win)), [["r0c0"], ["new"]]);
 });
 
 test("a new window goes to the visible ribbon whose columns are narrowest in total", () => {
   const rs = rows([rect(0, 0, 1920, 1080)]);
   // Two columns of 600 against one of 600: the single column is narrower.
-  assert.equal(opening(stack(2, [600, 600], [600]), rs, "r0c0")![0], 1);
+  assert.equal(openingNear(stack(2, [600, 600], [600]), rs, "r0c0")![0], 1);
   // Two columns of 200 against one of 600: the two columns are narrower.
-  assert.equal(opening(stack(2, [200, 200], [600]), rs, "r1c0")![0], 0);
+  assert.equal(openingNear(stack(2, [200, 200], [600]), rs, "r1c0")![0], 0);
 });
 
 test("off-screen ribbons keep the height they have when shown, stacked against the screen", () => {
@@ -352,4 +355,11 @@ test("off-screen ribbons keep the height they have when shown, stacked against t
   assert.deepEqual(y("r2c0"), [270, 1080]);
   assert.deepEqual(y("r0c0"), [-540, 0]);
   assert.deepEqual(y("r3c0"), [1080, 1350]);
+});
+
+test("a new window is balanced across visible ribbons even with no window to open next to", () => {
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  const ws = m.workspace<string>(2);
+  for (const w of ["a", "b", "c", "d"]) m.add(ws, w, 600, opening(ws, rs));
+  assert.deepEqual(ws.ribbons.map(r => r.columns.map(c => c.cells[0].win)), [["a", "c"], ["b", "d"]]);
 });

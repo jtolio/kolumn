@@ -1,7 +1,7 @@
 // Turns a workspace into window rectangles in KDE's global coordinates.
 // Nothing here touches KWin.
 
-import { clamp, find, total, type Ribbon, type Side, type Workspace } from "./model.ts";
+import { clamp, current, total, type Ribbon, type Side, type Workspace } from "./model.ts";
 
 export interface Rect { x: number; y: number; width: number; height: number }
 // main is the row's monitor that comes first in the list passed to rows().
@@ -146,24 +146,30 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   return out;
 }
 
-// Where a window opened while active has focus goes, as a ribbon and the
-// column to insert it after, for model.add(). It is the visible ribbon
-// whose columns are narrowest in total, preferring active's ribbon on a
-// tie, right after the column whose center is nearest active's center.
-// Undefined when active is not in this workspace.
-export function opening<W>(ws: Workspace<W>, rs: Row[], active: W): [number, number] | undefined {
-  const p = find(ws, active), rects = layout(ws, rs), from = rects.get(active);
-  if (!p || !from) return;
-  const width = (ribbon: Ribbon<W>) => ribbon.columns.reduce((s, c) => s + c.width, 0);
+// The index of ribbon r's column whose center is horizontally nearest
+// win's center.
+export function nearest<W>(ws: Workspace<W>, rs: Row[], win: W, r: number): number {
+  const rects = layout(ws, rs), center = (w: W) => rects.get(w)!.x + rects.get(w)!.width / 2;
+  const cols = ws.ribbons[r].columns, d = (c: number) => Math.abs(center(cols[c].cells[0].win) - center(win));
+  return cols.reduce((c0, _, c) => (d(c) < d(c0) ? c : c0), 0);
+}
+
+// Where a new window goes, as a ribbon and the column to insert it after,
+// for model.add(). The ribbon is the visible one whose columns are
+// narrowest in total, preferring the focused ribbon on a tie. The focused
+// window only picks the spot: right after it in its own ribbon, or right
+// after the column nearest it in another. Undefined when the workspace has
+// no ribbons yet.
+export function opening<W>(ws: Workspace<W>, rs: Row[]): [number, number] | undefined {
+  const width = (r: number) => ws.ribbons[r].columns.reduce((s, c) => s + c.width, 0);
   const visible = (r: number) => place(ws, rs, r).shift === 0;
-  let best = p.r;
-  ws.ribbons.forEach((ribbon, r) => {
-    if (visible(r) && width(ribbon) < width(ws.ribbons[best])) best = r;
+  let best = ws.ribbons[ws.focus] && visible(ws.focus) ? ws.focus : -1;
+  ws.ribbons.forEach((_, r) => {
+    if (visible(r) && (best < 0 || width(r) < width(best))) best = r;
   });
-  if (best === p.r) return [best, p.c];
-  const center = (r: Rect) => r.x + r.width / 2;
-  const dist = (c: number) => Math.abs(center(rects.get(ws.ribbons[best].columns[c].cells[0].win)!) - center(from));
-  return [best, ws.ribbons[best].columns.reduce((near, _, c) => (dist(c) < dist(near) ? c : near), 0)];
+  if (best < 0) return;
+  const win = current(ws);
+  return [best, best === ws.focus || win === undefined ? ws.ribbons[best].focus : nearest(ws, rs, win, best)];
 }
 
 // Scrolls as little as possible so the focused ribbon is shown, then steps

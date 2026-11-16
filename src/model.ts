@@ -30,6 +30,9 @@ export const workspace = <W>(shown = 1): Workspace<W> => ({ ribbons: [], top: 0,
 const ribbon = <W>(ws: Workspace<W>): Ribbon<W> => ({ columns: [], anchor: 0, focus: 0, weight: mean(ws.ribbons) });
 const column = <W>(win: W, width: number): Column<W> => ({ cells: [{ win, weight: 1 }], width, focus: 0 });
 const focused = <W>(column?: Column<W>) => column?.cells[column.focus]?.win;
+// The focused window of the focused ribbon. kolumn sets focus only for
+// windows it tiles, so this is the last active one.
+export const current = <W>(ws: Workspace<W>) => focused(ws.ribbons[ws.focus]?.columns[ws.ribbons[ws.focus].focus]);
 
 export function find<W>(ws: Workspace<W>, win: W): Pos<W> | undefined {
   for (const [r, ribbon] of ws.ribbons.entries()) {
@@ -107,10 +110,10 @@ export function remove<W>(ws: Workspace<W>, win: W) {
   prune(ws);
 }
 
-// The window that focus moves to. Up and down fall through to the column of
-// the next ribbon with windows that has the least distance(column),
-// entering it at the cell on the side focus comes from.
-export function neighbor<W>(ws: Workspace<W>, win: W, dir: Dir, distance: (column: Column<W>) => number): W | undefined {
+// The window that focus moves to. Up and down fall through to the next
+// ribbon with windows, r, entering its column pick(r) at the cell on the
+// side focus comes from.
+export function neighbor<W>(ws: Workspace<W>, win: W, dir: Dir, pick: (r: number) => number): W | undefined {
   const p = find(ws, win);
   if (!p) return;
   const [dx, dy] = delta[dir];
@@ -119,7 +122,7 @@ export function neighbor<W>(ws: Workspace<W>, win: W, dir: Dir, distance: (colum
   while (ws.ribbons[r] && !ws.ribbons[r].columns.length) r += dy;
   const own = p.column.cells[p.k + dy]?.win, next = ws.ribbons[r];
   if (own || !next) return own;
-  const column = next.columns.reduce((a, b) => (distance(b) < distance(a) ? b : a));
+  const column = next.columns[pick(r)];
   return column.cells[dy > 0 ? 0 : column.cells.length - 1].win;
 }
 

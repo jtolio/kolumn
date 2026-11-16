@@ -72,13 +72,12 @@ test("focus up and down falls through to the next ribbon, entering at the near c
   assert.equal(m.neighbor(ws, "c", "down", anywhere), undefined);
 });
 
-test("moving between ribbons picks the column with the least distance", () => {
+test("moving between ribbons enters the column pick chooses", () => {
   const ws = build("a", "b", "c", "d");
   m.move(ws, "d", "down");
   m.setFocus(ws, "a");
-  // Ribbon 0 has columns a, b, c. Pretend b is nearest, though a was focused last.
-  const at = { a: 0, b: 1000, c: 2000 } as Record<string, number>;
-  assert.equal(m.neighbor(ws, "d", "up", col => Math.abs(at[col.cells[0].win] - 900)), "b");
+  // Ribbon 0 has columns a, b, c. pick chooses b, though a was focused last.
+  assert.equal(m.neighbor(ws, "d", "up", r => (r === 0 ? 1 : 0)), "b");
 });
 
 test("moving sideways out of a shared column makes a new column on that side", () => {
