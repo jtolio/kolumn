@@ -250,7 +250,7 @@ test("with the main monitor on the right, hovering any window moves nothing", ()
   // where three fit. Every window should end up fully on one monitor, so
   // focus follows mouse never makes the view move.
   const rs = rows([rect(1920, 0, 2898, 1800), rect(0, 0, 1920, 1080)]);
-  const ws = m.workspace<string>();
+  const ws = m.workspace<string>(2);
   const open = (w: string, width: number) => { m.add(ws, w, width); m.setFocus(ws, w); scroll(ws, rs); };
   ["a0", "a1", "a2"].forEach(w => open(w, 1000));
   open("b0", 900);

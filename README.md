@@ -37,7 +37,7 @@ Each line reads `name=active keys,default keys,label`, and `\t` separates two ac
 kolumn has two settings, on its settings page under System Settings > Window Management > KWin Scripts:
 
 - Gap between windows, in pixels. The default is 6.
-- Ribbons per row at start, which is how many ribbons each monitor row shows when kolumn starts. The default is 2. The show more or fewer ribbons shortcuts still change it afterwards.
+- Ribbons per row at start, which is how many ribbons each monitor row shows when kolumn starts. The default is 1. The show more or fewer ribbons shortcuts still change it afterwards.
 
 The settings are stored in the `[Script-kolumn]` group of `kwinrc`, so you can also set them with `kwriteconfig6 --file kwinrc --group Script-kolumn --key Gap 10`. kolumn reads them only when it starts, so run `npm run reload` after changing them. KWin's settings page does not tell a running script that its settings changed.
 

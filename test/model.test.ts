@@ -189,12 +189,12 @@ test("a new ribbon gets the mean ribbon weight", () => {
   assert.deepEqual(ws.ribbons.map(r => r.weight), [3, 3]);
 });
 
-test("a workspace shows two ribbons per row by default", () => {
-  assert.equal(m.workspace().shown, 2);
+test("a workspace shows one ribbon per row by default", () => {
+  assert.equal(m.workspace().shown, 1);
 });
 
 test("a workspace keeps at least as many ribbons as each row shows", () => {
-  const ws = m.workspace<string>();
+  const ws = m.workspace<string>(2);
   m.add(ws, "a", 100);
   assert.deepEqual(shape(ws), [[["a"]], []]);
   m.move(ws, "a", "down");
@@ -222,7 +222,7 @@ test("focus up and down skips empty ribbons", () => {
 });
 
 test("moveTo puts a window into another ribbon as a new column", () => {
-  const ws = m.workspace<string>();
+  const ws = m.workspace<string>(2);
   m.add(ws, "a", 100);
   m.setFocus(ws, "a");
   m.add(ws, "b", 300);

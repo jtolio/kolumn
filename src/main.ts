@@ -40,7 +40,7 @@ const copy = (r: Rect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.hei
 // larger than its window. RIBBONS is how many ribbons each monitor row of a
 // new workspace shows.
 const GAP = Number(readConfig("Gap", 6));
-const RIBBONS = Math.max(1, Number(readConfig("Ribbons", 2)));
+const RIBBONS = Math.max(1, Number(readConfig("Ribbons", 1)));
 const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r.width - GAP, height: r.height - GAP });
 // screenOrder lists monitors by priority, with the primary monitor first.
 const rowsOf = (desktop: Desktop) => rows(workspace.screenOrder.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));

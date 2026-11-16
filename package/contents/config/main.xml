@@ -11,7 +11,7 @@
             <max>100</max>
         </entry>
         <entry name="Ribbons" type="Int">
-            <default>2</default>
+            <default>1</default>
             <min>1</min>
             <max>8</max>
         </entry>
