@@ -9,5 +9,6 @@
         "Version": "0.1"
     },
     "X-Plasma-API": "javascript",
-    "X-Plasma-MainScript": "code/main.js"
+    "X-Plasma-MainScript": "code/main.js",
+    "X-KDE-ConfigModule": "kcm_kwin4_genericscripted"
 }

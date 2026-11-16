@@ -25,6 +25,7 @@ declare const workspace: {
 declare const KWin: { MaximizeArea: number; ElectricLeft: number; ElectricRight: number; ElectricTop: number; ElectricBottom: number };
 declare function registerShortcut(name: string, text: string, keys: string, f: () => void): void;
 declare function registerScreenEdge(edge: number, f: () => void): void;
+declare function readConfig(key: string, fallback: unknown): unknown;
 
 // One workspace per virtual desktop, keyed by desktop id.
 interface Space { desktop: Desktop; ws: model.Workspace<Win> }
@@ -33,9 +34,13 @@ const home = new Map<Win, Space>();
 
 const copy = (r: Rect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.height });
 
-// Space between neighboring windows. Each window is inset from its cell by
-// half of it on every side, so a cell is GAP larger than its window.
-const GAP = 6;
+// Settings from the kolumn settings page in System Settings, read once when
+// kolumn starts. GAP is the space between neighboring windows. Each window
+// is inset from its cell by half of it on every side, so a cell is GAP
+// larger than its window. RIBBONS is how many ribbons each monitor row of a
+// new workspace shows.
+const GAP = Number(readConfig("Gap", 6));
+const RIBBONS = Math.max(1, Number(readConfig("Ribbons", 2)));
 const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r.width - GAP, height: r.height - GAP });
 // screenOrder lists monitors by priority, with the primary monitor first.
 const rowsOf = (desktop: Desktop) => rows(workspace.screenOrder.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
@@ -45,7 +50,7 @@ function add(w: Win) {
   if (w.minimized) return;
   const desktop = w.desktops[0] ?? workspace.currentDesktop;
   let s = spaces.get(desktop.id);
-  if (!s) spaces.set(desktop.id, (s = { desktop, ws: model.workspace() }));
+  if (!s) spaces.set(desktop.id, (s = { desktop, ws: model.workspace(RIBBONS) }));
   model.add(s.ws, w, w.frameGeometry.width + GAP);
   home.set(w, s);
 }
