@@ -45,19 +45,25 @@ const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r
 // screenOrder lists monitors by priority, with the primary monitor first.
 const rowsOf = (desktop: Desktop) => rows(workspace.screenOrder.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
 
+// The last active window kolumn tiles. KWin activates a new window before
+// it emits windowAdded (workspace.cpp addWaylandWindow, and requestFocus in
+// X11Window::manage), so a new window opens next to this one instead of
+// next to workspace.activeWindow, which is already the new window.
+let last: Win | null = null;
+
 // A window on all desktops has no desktops listed and joins the current one.
-// It opens where opening() says, next to the active window.
+// It opens where opening() says, next to the last active window.
 function add(w: Win) {
   if (w.minimized) return;
   const desktop = w.desktops[0] ?? workspace.currentDesktop;
   let s = spaces.get(desktop.id);
   if (!s) spaces.set(desktop.id, (s = { desktop, ws: model.workspace(RIBBONS) }));
-  const active = workspace.activeWindow;
-  model.add(s.ws, w, w.frameGeometry.width + GAP, active ? opening(s.ws, rowsOf(desktop), active) : undefined);
+  model.add(s.ws, w, w.frameGeometry.width + GAP, last ? opening(s.ws, rowsOf(desktop), last) : undefined);
   home.set(w, s);
 }
 
 function remove(w: Win) {
+  if (w === last) last = null;
   const s = home.get(w);
   if (s) model.remove(s.ws, w);
   home.delete(w);
@@ -68,6 +74,7 @@ function remove(w: Win) {
 function refresh() {
   const active = workspace.activeWindow, s = active && home.get(active);
   if (s) {
+    last = active;
     model.setFocus(s.ws, active);
     scroll(s.ws, rowsOf(s.desktop));
   }
