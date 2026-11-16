@@ -42,16 +42,22 @@ function span(row: Row, x: number, width: number, f0: number, f1: number): [numb
 
 // The x of each of the ribbon's columns. The row's main monitor holds a run
 // of columns starting at the anchor: as many as fit, added to the right and
-// then, at the end of the ribbon, to the left. The run sits against the
-// main monitor's edge on the side with nothing past it, so the columns on
-// the other side fill the rest. It is centered when the whole ribbon fits,
-// or when the columns that would fill the rest are past a seam.
-// Columns outside the run start on the next monitor, never in the main
-// monitor's leftover space. Moving the anchor by one moves one column across
-// the main monitor's edge. The other columns pack outward from the
-// run both ways. A column that would cross a seam between two monitors
-// moves past it and leaves a blank. Columns may run past the row's outer
-// edges. Positions depend only on the anchor, never on focus.
+// then, at the end of the ribbon, to the left. Where the run sits on the main
+// monitor:
+//   - When columns follow the run and the main monitor's right edge is an
+//     outer edge, the run sits against the left edge. The next column fills
+//     the leftover space on the right and hangs off the outer edge.
+//   - At the end of the ribbon, when columns precede the run and the main
+//     monitor's left edge is an outer edge, the run sits against the right
+//     edge, so the previous column fills the left side the same way.
+//   - Otherwise the run is centered, for example when the whole ribbon fits
+//     or when the leftover space faces a seam.
+// Where the leftover space faces a seam, the columns outside the run start
+// on the next monitor instead. Moving the anchor by one moves one column
+// across the main monitor's edge. The other columns pack outward from the
+// run both ways, and a column that would cross a seam moves past it and
+// leaves a blank. Columns may run past the row's outer edges. Positions
+// depend only on the anchor, never on focus.
 function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
   const cs = ribbon.columns, out: number[] = [];
   if (!cs.length) return out;
