@@ -131,17 +131,18 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
 }
 
 // Where a window opened while active has focus goes, as a ribbon and the
-// column to insert it after, for model.add(). It is the visible ribbon with
-// the fewest columns, preferring active's ribbon on a tie, right after the
-// column whose center is nearest active's center. Undefined when active is
-// not in this workspace.
+// column to insert it after, for model.add(). It is the visible ribbon
+// whose columns are narrowest in total, preferring active's ribbon on a
+// tie, right after the column whose center is nearest active's center.
+// Undefined when active is not in this workspace.
 export function opening<W>(ws: Workspace<W>, rs: Row[], active: W): [number, number] | undefined {
   const p = find(ws, active), rects = layout(ws, rs), from = rects.get(active);
   if (!p || !from) return;
+  const width = (ribbon: Ribbon<W>) => ribbon.columns.reduce((s, c) => s + c.width, 0);
   const visible = (r: number) => { const k = place(ws, rs, r).k; return k >= 0 && k < rs.length; };
   let best = p.r;
   ws.ribbons.forEach((ribbon, r) => {
-    if (visible(r) && ribbon.columns.length < ws.ribbons[best].columns.length) best = r;
+    if (visible(r) && width(ribbon) < width(ws.ribbons[best])) best = r;
   });
   if (best === p.r) return [best, p.c];
   const center = (r: Rect) => r.x + r.width / 2;

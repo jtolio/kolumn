@@ -331,3 +331,11 @@ test("an empty visible ribbon gets a new window first", () => {
   m.add(ws, "new", 300, opening(ws, rs, "r0c0"));
   assert.deepEqual(ws.ribbons.map(r => r.columns.map(c => c.cells[0].win)), [["r0c0"], ["new"]]);
 });
+
+test("a new window goes to the visible ribbon whose columns are narrowest in total", () => {
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  // Two columns of 600 against one of 600: the single column is narrower.
+  assert.equal(opening(stack(2, [600, 600], [600]), rs, "r0c0")![0], 1);
+  // Two columns of 200 against one of 600: the two columns are narrower.
+  assert.equal(opening(stack(2, [200, 200], [600]), rs, "r1c0")![0], 0);
+});
