@@ -17,7 +17,7 @@ SceneEffect {
         // stackingOrder and popupWindow have no change signals to bind to.
         property var windows: []
         Component.onCompleted: windows = Workspace.stackingOrder.filter(w =>
-            w.managed && (w.normalWindow || w.dialog) && !w.popupWindow && !w.minimized
+            w.managed && (w.normalWindow || w.dialog) && !w.popupWindow && w.opacity > 0 && w.moveableAcrossScreens && !w.minimized
             && (w.onAllDesktops || w.desktops.includes(Workspace.currentDesktop)))
         readonly property rect bounds: {
             const gs = windows.map(w => w.frameGeometry);
