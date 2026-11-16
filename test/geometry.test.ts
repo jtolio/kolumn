@@ -339,3 +339,17 @@ test("a new window goes to the visible ribbon whose columns are narrowest in tot
   // Two columns of 200 against one of 600: the two columns are narrower.
   assert.equal(opening(stack(2, [200, 200], [600]), rs, "r1c0")![0], 0);
 });
+
+test("off-screen ribbons keep the height they have when shown, stacked against the screen", () => {
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  const ws = stack(2, [600], [600], [600], [600]);
+  ws.ribbons[2].weight = 3;
+  // Rows show ribbons 1 and 2. Ribbon 0 would share the top with ribbon 1,
+  // and ribbon 3 the bottom with ribbon 2.
+  ws.top = 1;
+  const out = layout(ws, rs), y = (w: string) => [out.get(w)!.y, out.get(w)!.y + out.get(w)!.height];
+  assert.deepEqual(y("r1c0"), [0, 270]);
+  assert.deepEqual(y("r2c0"), [270, 1080]);
+  assert.deepEqual(y("r0c0"), [-540, 0]);
+  assert.deepEqual(y("r3c0"), [1080, 1350]);
+});

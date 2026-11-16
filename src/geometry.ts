@@ -82,14 +82,29 @@ function xs<W>(ribbon: Ribbon<W>, row: Row): number[] {
 }
 
 // Row k shows ws.shown ribbons starting at ribbon top + k * ws.shown, and
-// group is the ribbons that share ribbon r's row. A ribbon above or below
-// the rows gets a row index past the first or last row and a row to itself,
-// so off-screen ribbons stack away from the screen.
-export function place<W>(ws: Workspace<W>, rs: Row[], r: number): { k: number; group: Ribbon<W>[] } {
-  const j = r - ws.top, slots = rs.length * ws.shown;
-  if (j < 0 || j >= slots) return { k: j < 0 ? j : rs.length + j - slots, group: [ws.ribbons[r]] };
-  const k = Math.floor(j / ws.shown), first = ws.top + k * ws.shown;
-  return { k, group: ws.ribbons.slice(first, first + ws.shown) };
+// group is the ribbons that share ribbon r's row. A ribbon above the rows
+// is placed as if it were in the first row's top slot, with the ribbons
+// after it, and one below the rows as if it were in the last row's bottom
+// slot, with the ribbons before it. Scrolling as little as possible puts a
+// ribbon in those slots as it leaves the screen, so it keeps the height it
+// last had. shift is how many row heights it sits past that row, which
+// stacks the off-screen ribbons against each other away from the screen.
+// It is 0 exactly for the ribbons on screen.
+export function place<W>(ws: Workspace<W>, rs: Row[], r: number): { k: number; group: Ribbon<W>[]; shift: number } {
+  const n = ws.shown, j = r - ws.top, slots = rs.length * n;
+  const above = (q: number) => ws.ribbons.slice(q, q + n), below = (q: number) => ws.ribbons.slice(Math.max(0, q - n + 1), q + 1);
+  const share = (q: number, group: Ribbon<W>[]) => ws.ribbons[q].weight / total(group);
+  let shift = 0;
+  if (j < 0) {
+    for (let q = r; q < ws.top; q++) shift -= share(q, above(q));
+    return { k: 0, group: above(r), shift };
+  }
+  if (j >= slots) {
+    for (let q = ws.top + slots; q <= r; q++) shift += share(q, below(q));
+    return { k: rs.length - 1, group: below(r), shift };
+  }
+  const k = Math.floor(j / n), first = ws.top + k * n;
+  return { k, group: ws.ribbons.slice(first, first + n), shift };
 }
 
 // The fractions of its row's height, from the top, that a ribbon's band
@@ -102,7 +117,8 @@ function band<W>(group: Ribbon<W>[], ribbon: Ribbon<W>): [number, number] {
 // The shown ribbon whose band on the monitor under p contains p, if any.
 export function ribbonAt<W>(ws: Workspace<W>, rs: Row[], p: { x: number; y: number }): number | undefined {
   for (let r = 0; r < ws.ribbons.length; r++) {
-    const { k, group } = place(ws, rs, r), [f0, f1] = band(group, ws.ribbons[r]);
+    const { k, group, shift } = place(ws, rs, r), [f0, f1] = band(group, ws.ribbons[r]);
+    if (shift) continue;
     const m = rs[k]?.monitors.find(m => p.x >= m.x && p.x < m.x + m.width);
     if (m && p.y >= m.y + m.height * f0 && p.y < m.y + m.height * f1) return r;
   }
@@ -113,8 +129,8 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
   const out = new Map<W, Rect>();
   if (!rs.length) return out;
   ws.ribbons.forEach((ribbon, r) => {
-    const { k, group } = place(ws, rs, r), row = rs[clamp(k, rs.length)];
-    const dy = (k - clamp(k, rs.length)) * (row.bottom - row.top);
+    const { k, group, shift } = place(ws, rs, r), row = rs[k];
+    const dy = shift * (row.bottom - row.top);
     const [f0, f1] = band(group, ribbon), x = xs(ribbon, row);
     ribbon.columns.forEach((column, c) => {
       const [top, bottom] = span(row, x[c], column.width, f0, f1);
@@ -139,7 +155,7 @@ export function opening<W>(ws: Workspace<W>, rs: Row[], active: W): [number, num
   const p = find(ws, active), rects = layout(ws, rs), from = rects.get(active);
   if (!p || !from) return;
   const width = (ribbon: Ribbon<W>) => ribbon.columns.reduce((s, c) => s + c.width, 0);
-  const visible = (r: number) => { const k = place(ws, rs, r).k; return k >= 0 && k < rs.length; };
+  const visible = (r: number) => place(ws, rs, r).shift === 0;
   let best = p.r;
   ws.ribbons.forEach((ribbon, r) => {
     if (visible(r) && width(ribbon) < width(ws.ribbons[best])) best = r;
