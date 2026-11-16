@@ -54,7 +54,7 @@ kolumn places every window directly in KDE's global coordinate space. KWin then 
 
 | KWin signal | kolumn action |
 |---|---|
-| `windowAdded` | Insert the window as a new column to the right of the focused column, in the focused ribbon of the window's desktop. The column width is the window's current `frameGeometry.width`. |
+| `windowAdded` | Insert the window as a new column in the visible ribbon with the fewest columns, preferring the active window's ribbon on a tie, right after the column whose center is nearest the active window's center (`opening()`). An empty visible ribbon has zero columns, so it fills first. Without an active window in the same workspace, the window goes right of the focused column in the focused ribbon. The column width is the window's current `frameGeometry.width`. |
 | `windowRemoved`, `minimizedChanged` (to true), `desktopsChanged` | Remove the window from the layout. For `desktopsChanged`, insert it into its new desktop's workspace using the `windowAdded` rule. Unminimizing also uses the `windowAdded` rule. |
 | `windowActivated` | See the Focus section. |
 | `interactiveMoveResizeStarted` | Record the window's start geometry and whether this is a move or a resize. |

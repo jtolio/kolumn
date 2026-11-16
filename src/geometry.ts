@@ -1,7 +1,7 @@
 // Turns a workspace into window rectangles in KDE's global coordinates.
 // Nothing here touches KWin.
 
-import { clamp, total, type Ribbon, type Side, type Workspace } from "./model.ts";
+import { clamp, find, total, type Ribbon, type Side, type Workspace } from "./model.ts";
 
 export interface Rect { x: number; y: number; width: number; height: number }
 // main is the row's monitor that comes first in the list passed to rows().
@@ -128,6 +128,25 @@ export function layout<W>(ws: Workspace<W>, rs: Row[]): Map<W, Rect> {
     });
   });
   return out;
+}
+
+// Where a window opened while active has focus goes, as a ribbon and the
+// column to insert it after, for model.add(). It is the visible ribbon with
+// the fewest columns, preferring active's ribbon on a tie, right after the
+// column whose center is nearest active's center. Undefined when active is
+// not in this workspace.
+export function opening<W>(ws: Workspace<W>, rs: Row[], active: W): [number, number] | undefined {
+  const p = find(ws, active), rects = layout(ws, rs), from = rects.get(active);
+  if (!p || !from) return;
+  const visible = (r: number) => { const k = place(ws, rs, r).k; return k >= 0 && k < rs.length; };
+  let best = p.r;
+  ws.ribbons.forEach((ribbon, r) => {
+    if (visible(r) && ribbon.columns.length < ws.ribbons[best].columns.length) best = r;
+  });
+  if (best === p.r) return [best, p.c];
+  const center = (r: Rect) => r.x + r.width / 2;
+  const dist = (c: number) => Math.abs(center(rects.get(ws.ribbons[best].columns[c].cells[0].win)!) - center(from));
+  return [best, ws.ribbons[best].columns.reduce((near, _, c) => (dist(c) < dist(near) ? c : near), 0)];
 }
 
 // Scrolls as little as possible so the focused ribbon is shown, then steps

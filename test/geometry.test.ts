@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as m from "../src/model.ts";
-import { hit, layout, ribbonAt, rows, scroll, type Rect } from "../src/geometry.ts";
+import { hit, layout, opening, ribbonAt, rows, scroll, type Rect } from "../src/geometry.ts";
 
 const rect = (x: number, y: number, width: number, height: number): Rect => ({ x, y, width, height });
 
@@ -293,4 +293,41 @@ test("ribbonAt finds the shown ribbon whose band holds the point, empty ones too
   assert.equal(ribbonAt(ws, rs, { x: 100, y: 100 }), 0);
   assert.equal(ribbonAt(ws, rs, { x: 100, y: 900 }), 1);
   assert.equal(ribbonAt(ws, rs, { x: 5000, y: 900 }), undefined);
+});
+
+// Ribbons of the given column widths, named r<ribbon>c<column>.
+function stack(shown: number, ...ribbons: number[][]) {
+  const ws = m.workspace<string>(shown);
+  ribbons.forEach((widths, r) => {
+    if (r > 0) m.show(ws, Math.max(ws.shown, r + 1));
+    widths.forEach((width, c) => m.add(ws, `r${r}c${c}`, width, [r, c - 1]));
+  });
+  m.show(ws, shown);
+  return ws;
+}
+
+test("a new window opens in the visible ribbon with the fewest columns, after the nearest one", () => {
+  const ws = stack(2, [200, 400, 600], [400, 400]);
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  assert.deepEqual(opening(ws, rs, "r0c1"), [1, 0]);
+  m.add(ws, "new", 300, opening(ws, rs, "r0c1"));
+  assert.deepEqual(ws.ribbons[1].columns.map(c => c.cells[0].win), ["r1c0", "new", "r1c1"]);
+});
+
+test("on a tie a new window stays in the active window's ribbon, right of it", () => {
+  const ws = stack(2, [400, 400], [400, 400]);
+  assert.deepEqual(opening(ws, rows([rect(0, 0, 1920, 1080)]), "r1c0"), [1, 0]);
+});
+
+test("a new window never opens in a ribbon that is off screen", () => {
+  const ws = stack(1, [400, 400], [400]);
+  assert.deepEqual(opening(ws, rows([rect(0, 0, 1920, 1080)]), "r0c0"), [0, 0]);
+});
+
+test("an empty visible ribbon gets a new window first", () => {
+  const ws = stack(2, [400]);
+  const rs = rows([rect(0, 0, 1920, 1080)]);
+  assert.deepEqual(opening(ws, rs, "r0c0"), [1, 0]);
+  m.add(ws, "new", 300, opening(ws, rs, "r0c0"));
+  assert.deepEqual(ws.ribbons.map(r => r.columns.map(c => c.cells[0].win)), [["r0c0"], ["new"]]);
 });

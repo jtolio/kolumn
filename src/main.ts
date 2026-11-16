@@ -3,7 +3,7 @@
 // model.ts and geometry.ts.
 
 import * as model from "./model.ts";
-import { hit, layout, place, ribbonAt, rows, scroll, type Rect } from "./geometry.ts";
+import { hit, layout, opening, place, ribbonAt, rows, scroll, type Rect } from "./geometry.ts";
 
 // The parts of KWin's scripting API used here. See kwin/src/window.h and
 // kwin/src/scripting/workspace_wrapper.h.
@@ -46,12 +46,14 @@ const inset = (r: Rect): Rect => ({ x: r.x + GAP / 2, y: r.y + GAP / 2, width: r
 const rowsOf = (desktop: Desktop) => rows(workspace.screenOrder.map(o => copy(workspace.clientArea(KWin.MaximizeArea, o, desktop))));
 
 // A window on all desktops has no desktops listed and joins the current one.
+// It opens where opening() says, next to the active window.
 function add(w: Win) {
   if (w.minimized) return;
   const desktop = w.desktops[0] ?? workspace.currentDesktop;
   let s = spaces.get(desktop.id);
   if (!s) spaces.set(desktop.id, (s = { desktop, ws: model.workspace(RIBBONS) }));
-  model.add(s.ws, w, w.frameGeometry.width + GAP);
+  const active = workspace.activeWindow;
+  model.add(s.ws, w, w.frameGeometry.width + GAP, active ? opening(s.ws, rowsOf(desktop), active) : undefined);
   home.set(w, s);
 }
 

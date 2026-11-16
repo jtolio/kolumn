@@ -79,10 +79,12 @@ function detach<W>(ws: Workspace<W>, win: W) {
   return p;
 }
 
-// Adds win as a new column right of the focused column in the focused ribbon.
-export function add<W>(ws: Workspace<W>, win: W, width: number) {
+// Adds win as a new column in ribbon r right after column c. By default
+// that is right of the focused column in the focused ribbon.
+export function add<W>(ws: Workspace<W>, win: W, width: number, at?: [number, number]) {
   prune(ws);
-  insertRight(ws.ribbons[ws.focus], win, width);
+  const [r, c] = at ?? [ws.focus, ws.ribbons[ws.focus].focus];
+  ws.ribbons[r].columns.splice(c + 1, 0, column(win, width));
 }
 
 // Moves win into ribbon r as a new column right of that ribbon's focused
